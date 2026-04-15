@@ -1,0 +1,53 @@
+services:
+
+# ── Zookeeper: required by Kafka if in legacy mode ────────────────────────── 
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.4.0 
+#    container_name: zookeeper 
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181 
+#      ZOOKEEPER_TICK_TIME: 2000
+
+  # ── Kafka broker in KRaft mode ────────────────────────────────────────── 
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0 
+    container_name: kafka 
+    ports:
+      - '9092:9092' 
+    environment:
+      CLUSTER_ID: WXQbnHRPQ5ChPiSTivrtsw
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+      command: >
+        bash -c "
+        kafka-storage format --ignore-formatted -t YOUR_CLUSTER_ID -c /etc/kafka/kafka.properties &&
+        /etc/confluent/docker/run
+        "
+
+  # ── PostgreSQL database ─────────────────────────────────── 
+  postgres:
+    image: postgres:17
+    container_name: postgres 
+    ports:
+      - '5432:5432' 
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER} 
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} 
+      POSTGRES_DB: ${POSTGRES_DB} 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+volumes: 
+  postgres_data:
