@@ -43,16 +43,18 @@ CREATE TABLE IF NOT EXISTS weather_readings (
 --seed airports table
 INSERT INTO airports VALUES 
 ('LSZH','Zurich Airport','Zurich','Switzerland',47.46417,8.54917,'Europe/Zurich'), 
-('EGLL','London Heathrow','London','United Kingdom',51.47750,0.46139,'Europe/London'),
+('EGLL','London Heathrow','London','United Kingdom',51.47750,-0.46139,'Europe/London'),
 ('LFPG','Paris CDG','Paris','France',49.00972,2.54778,'Europe/Paris'),
 ('EHAM','Amsterdam Schiphol','Amsterdam','Netherlands',52.30806,4.76417,'Europe/Amsterdam'), 
-('EDDF','Frankfurt Airport','Frankfurt','Germany',50.03333,8.57056,'Europe/Berlin'), 
-('LEMD','Madrid Barajas','Madrid','Spain',40.49361,3.56639,'Europe/Madrid'),
-('KJFK','New York JFK','New York','United States',40.63972,73.77889,'America/New_York'),
-('KORD','Chicago O Hare','Chicago','United States',41.97861,87.90472,'America/Chicago'),
-('KATL','Atlanta Hartsfield','Atlanta','United States',33.64028,84.42694,'America/New_York'),
-('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,118.40806,'America/Los_Angeles'),
+('EDDF','Frankfurt Airport','Frankfurt','Germany',50.03333,8.57056,'Europe/Frankfurt'), 
+('LEMD','Madrid Barajas','Madrid','Spain',40.49361,-3.56639,'Europe/Madrid'),
+('LIRF','Rome Fiumicino','Rome','Italy',41.80028,12.23889,'Europe/Rome'),
+('KJFK','New York JFK','New York','United States',40.63972,-73.77889,'America/New_York'),
+('KORD','Chicago O Hare','Chicago','United States',41.97861,-87.90472,'America/Chicago'),
+('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,-118.40806,'America/Los_Angeles'),
+('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,79.63056,'America/Toronto'),
+('YMML','Melbourne Airport','Melbourne','Australia',37.67333,144.84333,'Australia/Melbourne'),
 ('OMDB','Dubai International','Dubai','UAE',25.25278,55.36444,'Asia/Dubai'), 
 ('WSSS','Singapore Changi','Singapore','Singapore',1.35917,103.98917,'Asia/Singapore'), 
-('VHHH','Hong Kong Intl','Hong Kong','China',22.30806,113.91417,'Asia/Hong_Kong') 
+('VHHH','Hong Kong Intl','Hong Kong','China',22.30806,113.91417,'Asia/Hong_Kong')
 ON CONFLICT DO NOTHING;
