@@ -21,7 +21,7 @@ AIRPORTS = {
     'YMML': (37.67333,144.84333),
     'OMDB': (25.25278, 55.36444),
     'WSSS': ( 1.35917,103.98917),
-    'VHHH': (22.30806,113.91417),
+    'VHHH': (22.30806,113.91417)
 }
 
 producer = KafkaProducer(
@@ -59,7 +59,7 @@ def fetch_weather(airport_code, lat, lon) :
             }
     except Exception as e:
         print(f'Error fetching weather for {airport_code}: {e}')
-        return None
+    return None
     
 def main():
     print('Weather producer started...')
