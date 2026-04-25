@@ -70,6 +70,7 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false' 
     volumes: 
       - ./airflow/dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt
     command: webserver
 
   airflow-scheduler:
