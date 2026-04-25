@@ -69,6 +69,24 @@ AIRPORT_COORDS = {
     'VHHH': (22.30806,113.91417),
 }
 
+AIRPORT_BOXES = {
+    'LSZH': (47.42, 47.52, 8.51,  8.61),
+    'EGLL': (51.44, 51.51, -0.50, -0.42),
+    'LFPG': (48.97, 49.04,  2.51,  2.59),
+    'EHAM': (52.27, 52.34,  4.73,  4.81),
+    'EDDF': (49.99, 50.07,  8.53,  8.61),
+    'LEMD': (40.46, 40.53, -3.60, -3.53),
+    'LIRF': (41.77, 41.84, 12.20, 12.28),
+    'KJFK': (40.61, 40.67,-73.82,-73.74),
+    'KORD': (41.95, 42.01,-87.95,-87.86),
+    'KLAX': (33.92, 33.97,-118.44,-118.37),
+    'CYYZ': (43.65, 43.71,-79.66,-79.59),
+    'YMML': (37.65, 37.70,144.82,144.87),
+    'OMDB': (25.23, 25.28, 55.34, 55.40),
+    'WSSS': ( 1.34,  1.38,103.97,104.01),
+    'VHHH': (22.29, 22.33,113.90,113.94),
+}
+
 
 # ---------------- KAFKA ----------------
 producer = KafkaProducer(
@@ -165,32 +183,31 @@ def main():
                 counts["skipped_slow"] += 1
                 continue
 
-            # -------- find closest airport --------
-            closest_airport = None
-            closest_dist = float("inf")
+            # --- BOUNDING BOXES FOR AIRPORT
+            airport = None
+            for ap, (lat_min, lat_max, lon_min, lon_max) in AIRPORT_BOXES.items():
+                if lat_min <= lat <= lat_max and lon_min <= lon <= lon_max:
+                    airport = ap
+                    break
 
-            for airport, (alat, alon) in AIRPORT_COORDS.items():
-                d = distance_km(lat, lon, alat, alon)
-                if d < closest_dist:
-                    closest_dist = d
-                    closest_airport = airport
-
-             # Ignore aircraft far from all monitored airports
-            if closest_dist > 200:
+            if airport is None:
                 counts["skipped_far"] += 1
-                continue
+                continue   # not inside any monitored airport box — ignore
 
-            airport = closest_airport
-            dist = closest_dist
+            dist = distance_km(lat, lon,
+                            AIRPORT_COORDS[airport][0],
+                            AIRPORT_COORDS[airport][1])
+
             key = (icao24, airport)
             prev = aircraft_state.get(key, {})
             prev_state = prev.get("state", "NONE")
             was_on_ground = prev.get("on_ground", False)
 
             # ── Landing detection: airborne last poll, on ground this poll ──
+            # --- Real Landing signal
             if on_ground:
                 counts["on_ground"] += 1
-                if not was_on_ground and prev_state == "APPROACHING":
+                if (not was_on_ground and prev_state in ("APPROACHING", "NONE") and prev.get("last_seen") and time.time() - prev.get("last_seen", 0) < 300):
                     counts["landings"] += 1
                     event = {
                         "icao24": icao24,
@@ -233,11 +250,41 @@ def main():
                     "last_seen": time.time()
                 }
                 continue
+            
+            # --- LANDING APPROXIMATION
+            if (prev_state == "APPROACHING" and
+                dist < 8 and
+                altitude < 600 and
+                velocity_kmh < 320 and
+                vertical_rate is not None and 
+                vertical_rate < -1):
+                counts["landings"] += 1
+                event = {
+                    "icao24": icao24,
+                    "callsign": callsign,
+                    "dest_airport": airport,
+                    "lat": lat,
+                    "lon": lon,
+                    "altitude": altitude,
+                    "velocity_kmh": round(velocity_kmh, 1),
+                    "vertical_rate": vertical_rate,
+                    "event_type": "landing_detected_geo",
+                    "polled_at": int(time.time())
+                }
+                producer.send("flights", value=event)
+                print(f"🛬 LANDING (geo) detected {callsign} -> {airport}")
+                aircraft_state[key] = {
+                    "state": "LANDED_GEO",
+                    "on_ground": False,
+                    "last_seen": time.time()
+                }
+                continue
 
             # ── Classify airborne aircraft near the airport ──
             is_approaching = (
                 dist < 50 and
-                altitude < 6000 
+                altitude < 8000 and
+                prev_state != "LANDED_GEO"
             )
 
             new_state = "APPROACHING" if is_approaching else "ENROUTE"
