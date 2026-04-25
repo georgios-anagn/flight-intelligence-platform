@@ -21,23 +21,24 @@ CREATE TABLE IF NOT EXISTS flights (
     velocity_kmh DECIMAL(6,1),
     vertical_rate DECIMAL(6,2),
     event_type VARCHAR(30),
-    polled_at TIMESTAMP,
-    ingested_at TIMESTAMP DEFAULT NOW()
+    polled_at WITH TIME ZONE,
+    ingested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- weather_readings: raw data from Open-Meteo 
 CREATE TABLE IF NOT EXISTS weather_readings ( 
     id SERIAL PRIMARY KEY,
     airport_code VARCHAR(4) REFERENCES airports(airport_code),
-    recorded_at TIMESTAMP,
+    recorded_at TIMESTAMP WITH TIME ZONE,
     temperature_c DECIMAL(5,2),
-    wind_speed_kmh DECIMAL(6,2),
-    wind_gust_kmh DECIMAL(6,2),
+    wind_speed_kmh DECIMAL(7,2),
+    wind_gust_kmh DECIMAL(7,2),
     precipitation_mm DECIMAL(6,2),
-    visibility_km DECIMAL(6,2),
+    visibility_km DECIMAL(7,2),
     cloud_cover_pct INTEGER,
     pressure_hpa DECIMAL(7,2),
     weather_code INTEGER
+    CONSTRAINT uq_weather_airport_time UNIQUE (airport_code, recorded_at)
 ); 
 
 --seed airports table

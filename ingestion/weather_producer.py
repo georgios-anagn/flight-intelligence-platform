@@ -53,7 +53,7 @@ def fetch_weather(airport_code, lat, lon, retries=2) :
                     'wind_speed_kmh': current['wind_speed_10m'],
                     'wind_gust_kmh': current['wind_gusts_10m'],
                     'precipitation_mm': current['precipitation'],
-                    'visibility_km': current.get('visibility'),
+                    'visibility_km': round(current.get('visibility', 10000) / 1000, 2),
                     'cloud_cover_pct': current['cloud_cover'],
                     'pressure_hpa': current['surface_pressure'],
                     'weather_code': current['weather_code'],

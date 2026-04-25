@@ -1,6 +1,7 @@
 import json, os
 from kafka import KafkaConsumer
 import psycopg2
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,27 +26,28 @@ cursor = conn.cursor()
 
 INSERT_SQL = """
     INSERT INTO flights
-        (flight_icao, origin_airport, dest_airport, actual_arr, delay_minutes, status)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        ON CONFLICT DO NOTHING
+        (icao24, callsign, dest_airport, lat, lon, altitude, velocity_kmh, vertical_rate, event_type, polled_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 """
 
 print('Flight consumer started...')
 for message in consumer:
     f = message.value
     try:
-        delay = f.get('arrivalDelay', 0) or 0
-        status = 'delayed' if delay > 900 else 'on_time'
         cursor.execute(INSERT_SQL,  (
-            f.get('callsign','').strip(),
-            f.get('estDepartureAirport'),
-            f.get('dest_airport'),
-            f.get('lastSeen'),
-            int(delay / 60),
-            status
-))
+            f.get('icao24'), 
+            f.get('callsign'), 
+            f.get('dest_airport'), 
+            f.get('lat'), 
+            f.get('lon'), 
+            f.get('altitude'), 
+            f.get('velocity_kmh'), 
+            f.get('vertical_rate'), 
+            f.get('event_type'), 
+            datetime.fromtimestamp(f.get('polled_at'), tz=timezone.utc)
+        ))
         conn.commit()
-        print(f'Inserted flight: {f.get("callsign","?")}')
+        print(f'Inserted flight: {f.get("callsign")} -> {f.get("dest_airport")}')
     except Exception as e:
         conn.rollback()
         print(f'Error inserting flight: {e}')

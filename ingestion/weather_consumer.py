@@ -27,6 +27,7 @@ INSERT_SQL = """
     INSERT INTO weather_readings
     (airport_code, recorded_at, temperature_c, wind_speed_kmh, wind_gust_kmh, precipitation_mm, visibility_km, cloud_cover_pct, pressure_hpa, weather_code) 
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (airport_code, recorded_at) DO NOTHING
 """
 
 print('Weather consumer started...')
@@ -35,7 +36,7 @@ for message in consumer:
     try:
         cursor.execute(INSERT_SQL, (
             w['airport_code'], w['recorded_at'],
-            w['temperature_c'], w['wind_speed_kmh'],
+            w['temperature_c'], w['wind_speed_kmh'], 
             w['wind_gust_kmh'], w['precipitation_mm'],
             w.get('visibility_km'), w['cloud_cover_pct'],
             w['pressure_hpa'], w['weather_code']
