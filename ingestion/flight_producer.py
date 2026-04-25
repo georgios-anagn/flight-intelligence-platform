@@ -47,8 +47,8 @@ tokens = TokenManager()
 # ---------------- AIRPORTS ----------------
 AIRPORTS = [
     'LSZH','EGLL','LFPG','EHAM','EDDF','LEMD',
-    'LIRF','KJFK','KORD','KLAX','CYYZ','YMML',
-    'OMDB','WSSS','VHHH'
+    'KJFK','KORD','KLAX','CYYZ','YMML',
+    'OMDB','VHHH'
 ]
 
 AIRPORT_COORDS = {
@@ -58,35 +58,46 @@ AIRPORT_COORDS = {
     'EHAM': (52.30806, 4.76417),
     'EDDF': (50.03333, 8.57056),
     'LEMD': (40.49361, -3.56639),
-    'LIRF': (41.80028,12.23889),
     'KJFK': (40.63972,-73.77889),
     'KORD': (41.97861,-87.90472),
     'KLAX': (33.94250,-118.40806),
     'CYYZ': (43.67722,-79.63056),
     'YMML': (37.67333,144.84333),
     'OMDB': (25.25278, 55.36444),
-    'WSSS': ( 1.35917,103.98917),
-    'VHHH': (22.30806,113.91417),
+    'VHHH': (22.30806,113.91417)
 }
 
 AIRPORT_BOXES = {
     'LSZH': (47.42, 47.52, 8.51,  8.61),
     'EGLL': (51.44, 51.51, -0.50, -0.42),
     'LFPG': (48.97, 49.04,  2.51,  2.59),
-    'EHAM': (52.27, 52.34,  4.73,  4.81),
+    'EHAM': (52.25, 52.37,  4.68,  4.84),
     'EDDF': (49.99, 50.07,  8.53,  8.61),
-    'LEMD': (40.46, 40.53, -3.60, -3.53),
-    'LIRF': (41.77, 41.84, 12.20, 12.28),
-    'KJFK': (40.61, 40.67,-73.82,-73.74),
-    'KORD': (41.95, 42.01,-87.95,-87.86),
-    'KLAX': (33.92, 33.97,-118.44,-118.37),
+    'LEMD': (40.41, 40.58, -3.65, -3.53),
+    'KJFK': (40.60, 40.68, -73.84, -73.72),
+    'KORD': (41.94, 42.02, -87.97, -87.84),
+    'KLAX': (33.91, 33.98, -118.46, -118.35),
     'CYYZ': (43.65, 43.71,-79.66,-79.59),
     'YMML': (37.65, 37.70,144.82,144.87),
     'OMDB': (25.23, 25.28, 55.34, 55.40),
-    'WSSS': ( 1.34,  1.38,103.97,104.01),
-    'VHHH': (22.29, 22.33,113.90,113.94),
+    'VHHH': (22.28, 22.34,113.88,113.96)   # widened and shifted slightly west
 }
 
+AIRPORT_ELEVATION_M = {
+    'LSZH': 432,
+    'EGLL': 25,
+    'LFPG': 119,
+    'EHAM': -4,
+    'EDDF': 111,
+    'LEMD': 610,   # highest 
+    'KJFK': 4,
+    'KORD': 203,
+    'KLAX': 38,
+    'CYYZ': 173,
+    'YMML': 132,
+    'OMDB': 19,
+    'VHHH': 9
+}
 
 # ---------------- KAFKA ----------------
 producer = KafkaProducer(
@@ -203,6 +214,9 @@ def main():
             prev_state = prev.get("state", "NONE")
             was_on_ground = prev.get("on_ground", False)
 
+            elevation = AIRPORT_ELEVATION_M.get(airport, 0)
+            altitude_agl = altitude - elevation if altitude is not None else None
+
             # ── Landing detection: airborne last poll, on ground this poll ──
             # --- Real Landing signal
             if on_ground:
@@ -252,12 +266,14 @@ def main():
                 continue
             
             # --- LANDING APPROXIMATION
-            if (prev_state == "APPROACHING" and
-                dist < 8 and
-                altitude < 600 and
+            if (dist < 8 and
+                altitude_agl is not None and
+                altitude_agl < 150 and
                 velocity_kmh < 320 and
                 vertical_rate is not None and 
-                vertical_rate < -1):
+                vertical_rate < -0.5 and
+                prev_state != "LANDED_GEO" and
+                prev_state != "ON_GROUND"):
                 counts["landings"] += 1
                 event = {
                     "icao24": icao24,
@@ -283,7 +299,8 @@ def main():
             # ── Classify airborne aircraft near the airport ──
             is_approaching = (
                 dist < 50 and
-                altitude < 8000 and
+                altitude_agl is not None and
+                altitude_agl < 8000 and
                 prev_state != "LANDED_GEO"
             )
 
@@ -291,9 +308,8 @@ def main():
 
             if new_state == "APPROACHING":
                 counts["approaching"] += 1
-                # Print every approaching aircraft so you can see the pipeline is working
                 print(f"  ✈  APPROACHING  {callsign:10} -> {airport}  "
-                      f"dist={dist:.1f}km  alt={altitude:.0f}m  "
+                      f"dist={dist:.1f}km  alt_agl={altitude_agl:.0f}m  "
                       f"spd={velocity_kmh:.0f}km/h  vrate={vertical_rate}")
             else:
                 counts["enroute"] += 1
@@ -333,62 +349,3 @@ def main():
 
 if __name__ == "__main__":
     main() 
-
-
-            # # ------------- Update distance history ----------------
-            # if key not in trajectory:
-            #     trajectory[key] = []
-            # trajectory[key].append(dist)
-
-            # # keep only last 3 values
-        #     if len(trajectory[key]) > MAX_HISTORY:
-        #         trajectory[key].pop(0)
-
-        #     prev_state = aircraft_state.get(key, {}).get("state", "NONE")
-
-        #     # ---------------- FLIGHT ARRIVAL LOGIC ------------------------------
-
-        #     is_arrival = (
-        #         dist < 20 and
-        #         altitude < 1500 and
-        #         velocity_kmh < 200 and
-        #         (vertical_rate is None or vertical_rate < 0) # and
-        #         #is_getting_closer(trajectory[key])
-        #     )
-
-             
-
-        #     new_state = "LANDED" if is_arrival else "APPROACHING" if is_approaching else "ENROUTE"
-
-        #     # ---------------- STATE TRANSITION DETECTION ----------------
-        #     if prev_state != "LANDED" and new_state == "LANDED":
-        #             event = {
-        #                 "icao24": icao24,
-        #                 "callsign": callsign,
-        #                 "dest_airport": airport,
-        #                 "lat": lat,
-        #                 "lon": lon,
-        #                 "altitude": altitude,
-        #                 "velocity_kmh": round(velocity_kmh, 1),
-        #                 "vertical_rate": vertical_rate,
-        #                 "on_ground": on_ground,
-        #                 "event_type": "landing_detected",
-        #                 "polled_at": int(time.time())
-        #             }
-
-        #             producer.send("flights", value=event)
-        #             print(f"🛬 LANDING detected {callsign} -> {airport}")
-
-        #     # ---------------- UPDATE STATE ----------------
-        #     aircraft_state[key] = {
-        #         "state": new_state,
-        #         "on_ground": on_ground,
-        #         "last_seen": time.time()
-        #     }
-
-        # producer.flush()
-        # print(f"Batch complete — {len(states)} states processed. Sleeping 60s...")
-        
-        
-
-
