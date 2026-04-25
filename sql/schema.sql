@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS flights (
     velocity_kmh DECIMAL(6,1),
     vertical_rate DECIMAL(6,2),
     event_type VARCHAR(30),
-    polled_at WITH TIME ZONE,
+    polled_at TIMESTAMP WITH TIME ZONE,
     ingested_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS weather_readings (
     visibility_km DECIMAL(7,2),
     cloud_cover_pct INTEGER,
     pressure_hpa DECIMAL(7,2),
-    weather_code INTEGER
+    weather_code INTEGER,
     CONSTRAINT uq_weather_airport_time UNIQUE (airport_code, recorded_at)
 ); 
 
