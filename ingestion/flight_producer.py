@@ -87,10 +87,10 @@ AIRPORT_ELEVATION_M = {
     'LSZH': 432,
     'EGLL': 25,
     'LFPG': 119,
-    'EHAM': -4,
+    'EHAM': -3,
     'EDDF': 111,
     'LEMD': 610,   # highest 
-    'KJFK': 4,
+    'KJFK': 3,
     'KORD': 203,
     'KLAX': 38,
     'CYYZ': 173,

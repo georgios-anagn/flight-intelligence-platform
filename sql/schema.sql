@@ -49,13 +49,11 @@ INSERT INTO airports VALUES
 ('EHAM','Amsterdam Schiphol','Amsterdam','Netherlands',52.30806,4.76417,'Europe/Amsterdam'), 
 ('EDDF','Frankfurt Airport','Frankfurt','Germany',50.03333,8.57056,'Europe/Frankfurt'), 
 ('LEMD','Madrid Barajas','Madrid','Spain',40.49361,-3.56639,'Europe/Madrid'),
-('LIRF','Rome Fiumicino','Rome','Italy',41.80028,12.23889,'Europe/Rome'),
 ('KJFK','New York JFK','New York','United States',40.63972,-73.77889,'America/New_York'),
 ('KORD','Chicago O Hare','Chicago','United States',41.97861,-87.90472,'America/Chicago'),
 ('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,-118.40806,'America/Los_Angeles'),
 ('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,-79.63056,'America/Toronto'),
 ('YMML','Melbourne Airport','Melbourne','Australia',37.67333,144.84333,'Australia/Melbourne'),
 ('OMDB','Dubai International','Dubai','UAE',25.25278,55.36444,'Asia/Dubai'), 
-('WSSS','Singapore Changi','Singapore','Singapore',1.35917,103.98917,'Asia/Singapore'), 
 ('VHHH','Hong Kong Intl','Hong Kong','China',22.30806,113.91417,'Asia/Hong_Kong')
 ON CONFLICT DO NOTHING;
