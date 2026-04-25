@@ -83,8 +83,8 @@ def main():
             print(f'  WARNING: failed airports this cycle: {failed}')
         else:
             print(f'  All 15 airports fetched successfully.')
-        print('Weather batch complete. Sleeping 60s...')
-        time.sleep(60)
+        print('Weather batch complete. Sleeping 300s...')
+        time.sleep(300)
 
 if __name__ == '__main__': 
     main()
