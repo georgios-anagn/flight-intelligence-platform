@@ -47,8 +47,7 @@ tokens = TokenManager()
 # ---------------- AIRPORTS ----------------
 AIRPORTS = [
     'LSZH','EGLL','LFPG','EHAM','EDDF','LEMD',
-    'KJFK','KORD','KLAX','CYYZ','YMML',
-    'OMDB','VHHH'
+    'KJFK','KORD','KLAX','CYYZ'
 ]
 
 AIRPORT_COORDS = {
@@ -61,10 +60,7 @@ AIRPORT_COORDS = {
     'KJFK': (40.63972,-73.77889),
     'KORD': (41.97861,-87.90472),
     'KLAX': (33.94250,-118.40806),
-    'CYYZ': (43.67722,-79.63056),
-    'YMML': (37.67333,144.84333),
-    'OMDB': (25.25278, 55.36444),
-    'VHHH': (22.30806,113.91417)
+    'CYYZ': (43.67722,-79.63056)
 }
 
 AIRPORT_BOXES = {
@@ -77,10 +73,7 @@ AIRPORT_BOXES = {
     'KJFK': (40.60, 40.68, -73.84, -73.72),
     'KORD': (41.94, 42.02, -87.97, -87.84),
     'KLAX': (33.91, 33.98, -118.46, -118.35),
-    'CYYZ': (43.65, 43.71,-79.66,-79.59),
-    'YMML': (37.65, 37.70,144.82,144.87),
-    'OMDB': (25.23, 25.28, 55.34, 55.40),
-    'VHHH': (22.28, 22.34,113.88,113.96)   # widened and shifted slightly west
+    'CYYZ': (43.65, 43.71,-79.66,-79.59)
 }
 
 AIRPORT_ELEVATION_M = {
@@ -93,10 +86,7 @@ AIRPORT_ELEVATION_M = {
     'KJFK': 3,
     'KORD': 203,
     'KLAX': 38,
-    'CYYZ': 173,
-    'YMML': 132,
-    'OMDB': 19,
-    'VHHH': 9
+    'CYYZ': 173
 }
 
 # ---------------- KAFKA ----------------

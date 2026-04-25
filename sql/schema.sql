@@ -53,7 +53,5 @@ INSERT INTO airports VALUES
 ('KORD','Chicago O Hare','Chicago','United States',41.97861,-87.90472,'America/Chicago'),
 ('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,-118.40806,'America/Los_Angeles'),
 ('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,-79.63056,'America/Toronto'),
-('YMML','Melbourne Airport','Melbourne','Australia',37.67333,144.84333,'Australia/Melbourne'),
-('OMDB','Dubai International','Dubai','UAE',25.25278,55.36444,'Asia/Dubai'), 
 ('VHHH','Hong Kong Intl','Hong Kong','China',22.30806,113.91417,'Asia/Hong_Kong')
 ON CONFLICT DO NOTHING;
