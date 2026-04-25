@@ -52,6 +52,5 @@ INSERT INTO airports VALUES
 ('KJFK','New York JFK','New York','United States',40.63972,-73.77889,'America/New_York'),
 ('KORD','Chicago O Hare','Chicago','United States',41.97861,-87.90472,'America/Chicago'),
 ('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,-118.40806,'America/Los_Angeles'),
-('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,-79.63056,'America/Toronto'),
-('VHHH','Hong Kong Intl','Hong Kong','China',22.30806,113.91417,'Asia/Hong_Kong')
+('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,-79.63056,'America/Toronto')
 ON CONFLICT DO NOTHING;
