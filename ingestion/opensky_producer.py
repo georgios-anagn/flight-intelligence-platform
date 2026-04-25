@@ -1,9 +1,7 @@
-import time, json, requests
+import time, json, requests, math, os
 from kafka import KafkaProducer
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import os
-import math
 
 TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 TOKEN_REFRESH_MARGIN = 30
@@ -53,7 +51,6 @@ AIRPORTS = [
     'OMDB','WSSS','VHHH'
 ]
 
-
 AIRPORT_COORDS = {
     'LSZH': (47.46417, 8.54917),
     'EGLL': (51.47750, -0.46139),
@@ -80,11 +77,7 @@ producer = KafkaProducer(
 )
 
 # ---------------- STATE TRACKING ----------------
-# (icao24, airport) -> state
 aircraft_state = {}
-trajectory = {}  # (icao24, airport) -> list of last distances
-
-MAX_HISTORY = 3
 STATE_RESET_TIME = 900  # 15 min cleanup
 
 
@@ -98,13 +91,6 @@ def distance_km(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
     return R * c
-
-# ---------------- DETECT FLIGHT TRAJECTORY ----------------
-def is_getting_closer(history):
-    if len(history) < 3:
-        return False
-    return history[-1] < history[-2] < history[-3]
-
 
 # ---------------- FETCH STATES ----------------
 def fetch_states():
@@ -126,11 +112,10 @@ def fetch_states():
 
 # ---------------- MAIN LOOP ----------------
 def main():
-    print("OpenSky STATES producer started...")
+    print("OpenSky producer started...")
 
     while True:
         states = fetch_states()
-        print(f"\n{'='*50}")
         print(f"Fetched {len(states)} aircraft states from OpenSky")
 
         if not states:
@@ -148,7 +133,7 @@ def main():
             "climbing": 0,
             "approaching": 0,
             "enroute": 0,
-            "landings_fired": 0,
+            "landings": 0,
         }
 
         for state in states:
@@ -206,7 +191,7 @@ def main():
             if on_ground:
                 counts["on_ground"] += 1
                 if not was_on_ground and prev_state == "APPROACHING":
-                    counts["landings_fired"] += 1
+                    counts["landings"] += 1
                     event = {
                         "icao24": icao24,
                         "callsign": callsign,
@@ -282,7 +267,7 @@ def main():
         print(f"  Climbing              : {counts['climbing']}")
         print(f"  Skipped (far)         : {counts['skipped_far']}")
         print(f"  Skipped (slow)        : {counts['skipped_slow']}")
-        print(f"  Landings fired        : {counts['landings_fired']}")
+        print(f"  Landings fired        : {counts['landings']}")
         print(f"  aircraft_state size   : {len(aircraft_state)}")
         print(f"Sleeping 60s...")
 
@@ -290,19 +275,12 @@ def main():
 
         # Cleanup AFTER processing
         now = time.time()
-        aircraft_state_copy = {
+        stale = {
             k: v for k, v in aircraft_state.items()
             if now - v["last_seen"] < STATE_RESET_TIME
         }
         aircraft_state.clear()
-        aircraft_state.update(aircraft_state_copy)
-
-        trajectory_copy = {
-            k: v for k, v in trajectory.items()
-            if k in aircraft_state
-        }
-        trajectory.clear()
-        trajectory.update(trajectory_copy)
+        aircraft_state.update(stale)
 
         time.sleep(60)
 

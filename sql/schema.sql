@@ -9,21 +9,21 @@ CREATE TABLE IF NOT EXISTS airports (
     timezone VARCHAR(50)
 ); 
 
--- flights: raw data from OpenSky
+-- flights: landing events detected by the state-machine producer
 CREATE TABLE IF NOT EXISTS flights ( 
     id SERIAL PRIMARY KEY,
-    flight_icao VARCHAR(10),
-    origin_airport VARCHAR(4) REFERENCES airports(airport_code),
-    dest_airport VARCHAR(4) REFERENCES airports(airport_code),
-    airline VARCHAR(100),
-    scheduled_dep TIMESTAMP,
-    actual_dep TIMESTAMP,
-    scheduled_arr TIMESTAMP,
-    actual_arr TIMESTAMP,
-    delay_minutes INTEGER,
-    status VARCHAR(20),
+    icao24 VARCHAR(10),
+    callsign VARCHAR(10),
+    dest_airport VARCHAR(4),
+    lat DECIMAL(8,5),
+    lon DECIMAL(8,5),
+    altitude DECIMAL(8,2),
+    velocity_kmh DECIMAL(6,1),
+    vertical_rate DECIMAL(6,2),
+    event_type VARCHAR(30),
+    polled_at TIMESTAMP,
     ingested_at TIMESTAMP DEFAULT NOW()
-); 
+);
 
 -- weather_readings: raw data from Open-Meteo 
 CREATE TABLE IF NOT EXISTS weather_readings ( 
@@ -52,7 +52,7 @@ INSERT INTO airports VALUES
 ('KJFK','New York JFK','New York','United States',40.63972,-73.77889,'America/New_York'),
 ('KORD','Chicago O Hare','Chicago','United States',41.97861,-87.90472,'America/Chicago'),
 ('KLAX','Los Angeles LAX','Los Angeles','United States',33.94250,-118.40806,'America/Los_Angeles'),
-('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,79.63056,'America/Toronto'),
+('CYYZ','Toronto Pearson','Toronto','Canada',43.67722,-79.63056,'America/Toronto'),
 ('YMML','Melbourne Airport','Melbourne','Australia',37.67333,144.84333,'Australia/Melbourne'),
 ('OMDB','Dubai International','Dubai','UAE',25.25278,55.36444,'Asia/Dubai'), 
 ('WSSS','Singapore Changi','Singapore','Singapore',1.35917,103.98917,'Asia/Singapore'), 
