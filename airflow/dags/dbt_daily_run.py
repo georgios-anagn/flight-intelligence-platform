@@ -14,5 +14,3 @@ with DAG(
         task_id='run_dbt', 
         bash_command='cd /opt/airflow/dbt && dbt run' 
     )
-
-docker compose up -d
