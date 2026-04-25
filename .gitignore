@@ -5,6 +5,8 @@ __pycache__/
 .ipynb_checkpoints/
 data/
 logs/
+profiles.yml
+.user.yml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
