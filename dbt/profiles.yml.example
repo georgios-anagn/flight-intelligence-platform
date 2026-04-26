@@ -1,0 +1,12 @@
+flight_intelligence:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost          # use "postgres" when running inside Docker
+      port: 5432
+      user: YOUR_DB_USER
+      password: YOUR_DB_PASSWORD
+      dbname: flightdb
+      schema: public
+      threads: 4
