@@ -13,5 +13,5 @@ with DAG(
 ) as dag: 
     BashOperator( 
         task_id='run_dbt', 
-        bash_command='cd dbt && dbt run' 
+        bash_command='cd /opt/airflow/dbt && dbt run --profiles-dir /opt/airflow/dbt' 
     )

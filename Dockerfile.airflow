@@ -1,0 +1,5 @@
+FROM apache/airflow:2.8.0
+USER airflow
+RUN pip install --no-cache-dir psycopg2-binary
+RUN pip install --no-cache-dir --no-deps "dbt-postgres==1.8.0"
+RUN pip install --no-cache-dir "dbt-core==1.8.0"
