@@ -77,7 +77,7 @@ def main():
         if failed:
             print(f'  WARNING: failed airports this cycle: {failed}')
         else:
-            print(f'  All 15 airports fetched successfully.')
+            print(f'  All 10 airports fetched successfully.')
         print('Weather batch complete. Sleeping 300s...')
         time.sleep(300)
 
