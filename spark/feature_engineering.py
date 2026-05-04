@@ -21,8 +21,8 @@ spark.sparkContext.setLogLevel('WARN')
 
 JDBC_URL = f"jdbc:postgresql://{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5432')}/{os.getenv('POSTGRES_DB', 'flightdb')}"
 JDBC_PROPS = {
-    "user":     os.getenv('POSTGRES_USER', 'flightuser'),
-    "password": os.getenv('POSTGRES_PASSWORD', 'flightpass'),
+    "user":     os.getenv('POSTGRES_USER'),
+    "password": os.getenv('POSTGRES_PASSWORD'),
     "driver":   "org.postgresql.Driver"
 }
 
