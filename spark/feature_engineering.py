@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# -- Disable native Hadoop extensions 
+os.environ["HADOOP_HOME"] = "C:\\hadoop"
+os.environ["hadoop.home.dir"] = "C:\\hadoop"
+os.environ["JAVA_HOME"] = "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot"
+os.environ["PYSPARK_HADOOP_VERSION"] = "3"
+
 # ── You need the PostgreSQL JDBC driver jar ──────────────────────────────────
 # Download from: https://jdbc.postgresql.org/download/
 # Save as: spark/postgresql-42.7.3.jar
@@ -13,6 +19,10 @@ load_dotenv()
 
 spark = SparkSession.builder \
     .appName('FlightFeatureEngineering') \
+    .config("spark.hadoop.io.native.lib.available", "false") \
+    .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem") \
+    .config("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "2") \
+    .config("spark.hadoop.fs.file.impl.disable.cache", "true") \
     .config('spark.driver.memory', '2g') \
     .config('spark.jars', 'spark/postgresql-42.7.3.jar') \
     .getOrCreate()
@@ -29,21 +39,20 @@ JDBC_PROPS = {
 # ── Step 1: Read from PostgreSQL ─────────────────────────────────────────────
 print("Reading flights from PostgreSQL...")
 flights = spark.read.jdbc(JDBC_URL, "flights", properties=JDBC_PROPS)
-print(f"  Flights loaded: {flights.count()} rows")
+print(f"Flights loaded: {flights.count()} rows")
 
 print("Reading weather from PostgreSQL...")
 weather = spark.read.jdbc(JDBC_URL, "weather_readings", properties=JDBC_PROPS)
-print(f"  Weather loaded: {weather.count()} rows")
+print(f"Weather loaded: {weather.count()} rows")
 
 # ── Step 2: Save raw snapshots to Parquet lake ───────────────────────────────
 print("Saving raw snapshots to Parquet lake...")
 flights.write.mode('overwrite').parquet('data/lake/flights/')
-weather.write.mode('overwrite').parquet('data/lake/weather/')
-print("  Raw snapshots saved.")
+weather.write.mode('overwrite').parquet("data/lake/weather/")
+print("Raw snapshots saved.")
 
 # ── Step 3: Read back from Parquet for feature engineering ───────────────────
-# We read from Parquet from this point forward — not PostgreSQL
-# This is intentional: Spark is designed to work on files, not live DB queries
+# Read from Parquet from this point forward — not PostgreSQL
 flights = spark.read.parquet('data/lake/flights/')
 weather = spark.read.parquet('data/lake/weather/')
 
@@ -84,7 +93,7 @@ weather_enriched = weather \
     .withColumn('is_heavy_rain',
         F.when(F.col('precipitation_mm') > 5, 1).otherwise(0)) \
     .withColumn('is_extreme_heat',
-        F.when(F.col('temperature_c') > 40, 1).otherwise(0)) \
+        F.when(F.col('temperature_c') > 38, 1).otherwise(0)) \
     .withColumn('is_freezing',
         F.when(F.col('temperature_c') < 0, 1).otherwise(0))
 
@@ -139,12 +148,12 @@ joined = flights_rounded.join(
     weather_rounded.is_freezing
 )
 
-print(f"  Joined dataset: {joined.count()} rows")
+print(f"Joined dataset: {joined.count()} rows")
 
 # ── Step 7: Write enriched features to Parquet ───────────────────────────────
 print("Writing enriched features to Parquet...")
 joined.write.mode('overwrite').parquet('data/lake/enriched_features/')
-print("  Enriched features saved.")
+print(" Enriched features saved.")
 
 # ── Step 8: Write back to PostgreSQL for dbt and ML to use ───────────────────
 # This creates an enriched_flights table in PostgreSQL with all Spark features
@@ -154,7 +163,7 @@ joined.write \
     .jdbc(JDBC_URL, "enriched_flights",
           mode="overwrite",
           properties=JDBC_PROPS)
-print("  enriched_flights table written to PostgreSQL.")
+print("enriched_flights table written to PostgreSQL.")
 
 print("\nFeature engineering complete.")
 spark.stop()
