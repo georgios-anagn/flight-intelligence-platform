@@ -98,6 +98,7 @@ producer = KafkaProducer(
 # ---------------- STATE TRACKING ----------------
 aircraft_state = {}
 STATE_RESET_TIME = 900  # 15 min cleanup
+LANDING_COOLDOWN = 600  # 10 minutes
 
 
 # ---------------- DISTANCE FUNCTION TO INFER ARRIVALS ----------------
@@ -135,6 +136,7 @@ def main():
 
     while True:
         states = fetch_states()
+        now = time.time()
         print(f"Fetched {len(states)} aircraft states from OpenSky")
 
         if not states:
@@ -177,7 +179,7 @@ def main():
                 continue
 
             # convert velocity m/s -> km/h
-            velocity_kmh = velocity * 3.6
+            velocity_kmh = velocity * 3.6 
 
              # Exclude helicopters and slow aircraft
             if velocity_kmh < 150 and not on_ground:
@@ -203,15 +205,21 @@ def main():
             prev = aircraft_state.get(key, {})
             prev_state = prev.get("state", "NONE")
             was_on_ground = prev.get("on_ground", False)
+            last_landing = prev.get("last_landing_time", 0)
+            last_seen = prev.get("last_seen", 0)
 
             elevation = AIRPORT_ELEVATION_M.get(airport, 0)
             altitude_agl = altitude - elevation if altitude is not None else None
+
+            landing_cooldown_ok = (now - last_landing) > LANDING_COOLDOWN
+            recent_contact = (now - last_seen) < 300
 
             # ── Landing detection: airborne last poll, on ground this poll ──
             # --- Real Landing signal
             if on_ground:
                 counts["on_ground"] += 1
-                if (not was_on_ground and prev_state in ("APPROACHING", "NONE") and prev.get("last_seen") and time.time() - prev.get("last_seen", 0) < 300):
+
+                if (not was_on_ground and prev_state == "APPROACHING" and landing_cooldown_ok  and recent_contact):
                     counts["landings"] += 1
                     event = {
                         "icao24": icao24,
@@ -223,25 +231,39 @@ def main():
                         "velocity_kmh": round(velocity_kmh, 1),
                         "vertical_rate": vertical_rate,
                         "event_type": "landing_detected",
-                        "polled_at": int(time.time())
+                        "polled_at": int(now)
                     }
+
                     producer.send("flights", value=event)
                     print(f"🛬 LANDING detected {callsign} -> {airport}")
 
-                aircraft_state[key] = {
-                    "state": "ON_GROUND",
-                    "on_ground": True,
-                    "last_seen": time.time()
-                }
+                    aircraft_state[key] = {
+                        "state": "ON_GROUND",
+                        "on_ground": True,
+                        "last_seen": now,
+                        "last_landing_time": now
+                    }
+                    
+                else:
+                    # aircraft already on ground OR still in cooldown
+                    aircraft_state[key] = {
+                        "state": "ON_GROUND",
+                        "on_ground": True,
+                        "last_seen": now,
+                        "last_landing_time": last_landing
+                    }
+                
                 continue
             
+            
             # ── Skip fresh departures 
-            if was_on_ground:
+            if was_on_ground and prev_state != "LANDED_GEO":
                 counts["departing"] += 1
                 aircraft_state[key] = {
                     "state": "DEPARTING",
                     "on_ground": False,
-                    "last_seen": time.time()
+                    "last_seen": now,
+                    "last_landing_time": last_landing
                 }
                 continue
 
@@ -251,19 +273,22 @@ def main():
                 aircraft_state[key] = {
                     "state": "CLIMBING",
                     "on_ground": False,
-                    "last_seen": time.time()
+                    "last_seen": now,
+                    "last_landing_time": last_landing
                 }
                 continue
             
             # --- LANDING APPROXIMATION
-            if (dist < 8 and
+            if (dist < 4 and
                 altitude_agl is not None and
                 altitude_agl < 150 and
                 velocity_kmh < 320 and
                 vertical_rate is not None and 
                 vertical_rate < -0.5 and
                 prev_state != "LANDED_GEO" and
-                prev_state != "ON_GROUND"):
+                prev_state != "ON_GROUND" and
+                landing_cooldown_ok):
+
                 counts["landings"] += 1
                 event = {
                     "icao24": icao24,
@@ -275,14 +300,15 @@ def main():
                     "velocity_kmh": round(velocity_kmh, 1),
                     "vertical_rate": vertical_rate,
                     "event_type": "landing_detected_geo",
-                    "polled_at": int(time.time())
+                    "polled_at": int(now)
                 }
                 producer.send("flights", value=event)
                 print(f"🛬 LANDING (geo) detected {callsign} -> {airport}")
                 aircraft_state[key] = {
                     "state": "LANDED_GEO",
                     "on_ground": False,
-                    "last_seen": time.time()
+                    "last_seen": now,
+                    "last_landing_time": now
                 }
                 continue
 
@@ -291,7 +317,7 @@ def main():
                 dist < 50 and
                 altitude_agl is not None and
                 altitude_agl < 8000 and
-                prev_state != "LANDED_GEO"
+                prev_state not in ("LANDED_GEO", "ON_GROUND")
             )
 
             new_state = "APPROACHING" if is_approaching else "ENROUTE"
@@ -307,7 +333,8 @@ def main():
             aircraft_state[key] = {
                 "state": new_state,
                 "on_ground": False,
-                "last_seen": time.time()
+                "last_seen": now,
+                "last_landing_time": last_landing
             }
 
         producer.flush()
@@ -328,12 +355,13 @@ def main():
 
         # Cleanup AFTER processing
         now = time.time()
-        stale = {
-            k: v for k, v in aircraft_state.items()
-            if now - v["last_seen"] < STATE_RESET_TIME
-        }
-        aircraft_state.clear()
-        aircraft_state.update(stale)
+        to_delete = [
+            k for k, v in aircraft_state.items()
+            if now - v["last_seen"] > 3 * 3600  # 3 hours
+        ]
+
+        for k in to_delete:
+            del aircraft_state[k]
 
         time.sleep(60)
 
