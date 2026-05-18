@@ -6,12 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# -- Disable native Hadoop extensions 
-os.environ["HADOOP_HOME"] = "C:\\hadoop"
-os.environ["hadoop.home.dir"] = "C:\\hadoop"
-os.environ["JAVA_HOME"] = "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.19.10-hotspot"
-os.environ["PYSPARK_HADOOP_VERSION"] = "3"
-
 # ── You need the PostgreSQL JDBC driver jar ──────────────────────────────────
 # Download from: https://jdbc.postgresql.org/download/
 # Save as: spark/postgresql-42.7.3.jar
@@ -24,12 +18,14 @@ spark = SparkSession.builder \
     .config("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "2") \
     .config("spark.hadoop.fs.file.impl.disable.cache", "true") \
     .config('spark.driver.memory', '2g') \
-    .config('spark.jars', 'spark/postgresql-42.7.3.jar') \
+    .config(
+    'spark.jars',
+    '/opt/airflow/spark/postgresql-42.7.3.jar') \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel('WARN')
 
-JDBC_URL = f"jdbc:postgresql://{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5432')}/{os.getenv('POSTGRES_DB', 'flightdb')}"
+JDBC_URL = f"jdbc:postgresql://{os.getenv('POSTGRES_HOST_DOCKER', 'postgres')}:{os.getenv('POSTGRES_PORT', '5432')}/{os.getenv('POSTGRES_DB', 'flightdb')}"  # "postgres" as host and not "localhost" because spark runs in docker.
 JDBC_PROPS = {
     "user":     os.getenv('POSTGRES_USER'),
     "password": os.getenv('POSTGRES_PASSWORD'),
@@ -47,14 +43,14 @@ print(f"Weather loaded: {weather.count()} rows")
 
 # ── Step 2: Save raw snapshots to Parquet lake ───────────────────────────────
 print("Saving raw snapshots to Parquet lake...")
-flights.write.mode('overwrite').parquet('data/lake/flights/')
-weather.write.mode('overwrite').parquet("data/lake/weather/")
+flights.write.mode('overwrite').parquet('/opt/airflow/data/lake/flights/')
+weather.write.mode('overwrite').parquet("/opt/airflow/data/lake/weather/")
 print("Raw snapshots saved.")
 
 # ── Step 3: Read back from Parquet for feature engineering ───────────────────
 # Read from Parquet from this point forward — not PostgreSQL
-flights = spark.read.parquet('data/lake/flights/')
-weather = spark.read.parquet('data/lake/weather/')
+flights = spark.read.parquet('/opt/airflow/data/lake/flights/')
+weather = spark.read.parquet('/opt/airflow/data/lake/weather/')
 
 # ── Step 4: Feature engineering on flights ───────────────────────────────────
 print("Engineering flight features...")
@@ -152,7 +148,7 @@ print(f"Joined dataset: {joined.count()} rows")
 
 # ── Step 7: Write enriched features to Parquet ───────────────────────────────
 print("Writing enriched features to Parquet...")
-joined.write.mode('overwrite').parquet('data/lake/enriched_features/')
+joined.write.mode('overwrite').parquet('/opt/airflow/data/lake/enriched_features/')
 print(" Enriched features saved.")
 
 # ── Step 8: Write back to PostgreSQL for dbt and ML to use ───────────────────

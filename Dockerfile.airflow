@@ -1,5 +1,29 @@
 FROM apache/airflow:2.8.0
+
+USER root
+
+# Java (required for Spark)
+RUN apt-get update && \
+    apt-get install -y openjdk-17-jdk wget && \
+    apt-get clean
+
+# Spark
+ENV SPARK_VERSION=3.5.1
+ENV HADOOP_VERSION=3
+
+RUN wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    tar -xzf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+    mv spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt/spark && \
+    rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
+
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${PATH}:${SPARK_HOME}/bin"
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
 USER airflow
+
 RUN pip install --no-cache-dir psycopg2-binary
 RUN pip install --no-cache-dir --no-deps "dbt-postgres==1.8.0"
 RUN pip install --no-cache-dir "dbt-core==1.8.0"
+RUN pip install --no-cache-dir pyspark 
+RUN pip install --no-cache-dir python-dotenv

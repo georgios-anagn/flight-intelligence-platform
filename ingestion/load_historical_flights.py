@@ -10,7 +10,7 @@ AIRPORTS = ['LSZH','EGLL','LFPG','EHAM','EDDF','LEMD',
     'KJFK','KORD','KLAX','CYYZ']
 
 conn = psycopg2.connect(
-    host=os.getenv('POSTGRES_HOST'),
+    host=os.getenv('POSTGRES_HOST_LOCAL'),
     port=os.getenv('POSTGRES_PORT'),
     dbname=os.getenv('POSTGRES_DB'),
     user=os.getenv('POSTGRES_USER'),
