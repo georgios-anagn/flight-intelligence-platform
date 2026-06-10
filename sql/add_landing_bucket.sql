@@ -8,3 +8,7 @@ UPDATE flights
 SET landing_bucket =
     date_trunc('hour', polled_at)
     + floor(extract(minute from polled_at) / 30) * interval '30 minutes';
+
+ALTER TABLE flights
+ADD CONSTRAINT uq_flight_landing
+UNIQUE (icao24, dest_airport, landing_bucket);
