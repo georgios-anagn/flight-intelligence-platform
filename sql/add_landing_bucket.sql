@@ -4,6 +4,7 @@
 ALTER TABLE flights
 ADD COLUMN landing_bucket TIMESTAMP;
 
+-- values for the historical data
 UPDATE flights
 SET landing_bucket =
     date_trunc('hour', polled_at)
