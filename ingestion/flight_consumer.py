@@ -62,6 +62,14 @@ for message in consumer:
         ))
         conn.commit()
         print(f'Inserted flight: {f.get("callsign")} -> {f.get("dest_airport")}')
+    except UniqueViolation:
+        conn.rollback()
+        print(
+            f'🚫 DUPLICATE LANDING IGNORED: '
+            f'{f.get("callsign")} -> {f.get("dest_airport")} '
+            f'({f.get("event_type")})'
+        )
+
     except Exception as e:
         conn.rollback()
         print(f'Error inserting flight: {e}')
