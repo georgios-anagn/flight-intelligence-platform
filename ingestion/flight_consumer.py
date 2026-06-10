@@ -26,14 +26,27 @@ cursor = conn.cursor()
 
 INSERT_SQL = """
     INSERT INTO flights
-        (icao24, callsign, dest_airport, lat, lon, altitude, velocity_kmh, vertical_rate, event_type, polled_at)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (icao24, callsign, dest_airport, lat, lon, altitude, velocity_kmh, vertical_rate, event_type, polled_at, landing_bucket)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (icao24, dest_airport, landing_bucket) WHERE event_type IN ('landing_detected', 'landing_detected_geo') DO NOTHING
 """
 
 print('Flight consumer started...')
 for message in consumer:
     f = message.value
     try:
+        polled_at = datetime.fromtimestamp(
+            f.get('polled_at'),
+            tz=timezone.utc
+        )
+
+        # using 30minute bucket instead of hour in order to capture the case of duplicate landing recognition at e.g. 10:55 and 11:10
+        landing_bucket = polled_at.replace(   
+            minute=(polled_at.minute // 30) * 30,
+            second=0,
+            microsecond=0
+        )
+
         cursor.execute(INSERT_SQL,  (
             f.get('icao24'), 
             f.get('callsign'), 
@@ -44,7 +57,8 @@ for message in consumer:
             f.get('velocity_kmh'), 
             f.get('vertical_rate'), 
             f.get('event_type'), 
-            datetime.fromtimestamp(f.get('polled_at'), tz=timezone.utc)
+            polled_at,
+            landing_bucket
         ))
         conn.commit()
         print(f'Inserted flight: {f.get("callsign")} -> {f.get("dest_airport")}')
