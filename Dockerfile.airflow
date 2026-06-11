@@ -29,3 +29,5 @@ RUN pip install --no-cache-dir --no-deps "dbt-postgres==1.8.0"
 RUN pip install --no-cache-dir "dbt-core==1.8.0"
 RUN pip install --no-cache-dir pyspark 
 RUN pip install --no-cache-dir python-dotenv
+RUN pip install --no-cache-dir pandas 
+RUN pip install --no-cache-dir scikit-learn
