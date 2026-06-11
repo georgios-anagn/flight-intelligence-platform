@@ -43,7 +43,8 @@ df = pd.read_sql('''
         e.is_heavy_rain,
         e.is_extreme_heat,
         e.is_freezing,
-        e.rolling_avg_landings
+        e.rolling_avg_landings,
+        e.polled_at   
     FROM flight_weather_impact i
     LEFT JOIN enriched_flights e
         ON  i.airport_code = e.dest_airport
@@ -77,13 +78,26 @@ df['is_extreme_heat'] = df['is_extreme_heat'].fillna(0).astype(int)
 df['is_freezing'] = df['is_freezing'].fillna(0).astype(int)
 df['rolling_avg_landings'] = df['rolling_avg_landings'].fillna(0)
 
-X = df[features]
-y_class = df['is_disrupted'].astype(int)
-y_reg   = df['landing_deviation']
+# ── Train/Test data ───────────────────────────────────────────
+# The question is "can the model predict the most recent unseen airport/weather conditions?" - therefore, we do not use random test-split but the latest days
+# Ensure time order
+df = df.sort_values('polled_at')
 
-X_train, X_test, yc_train, yc_test, yr_train, yr_test = train_test_split(
-    X, y_class, y_reg, test_size=0.2, random_state=42
-)
+# Define time-based cutoff (last 1 day = test set)
+cutoff = df['polled_at'].max() - pd.Timedelta(days=1)
+
+train_df = df[df['polled_at'] <= cutoff]
+test_df  = df[df['polled_at'] > cutoff]
+
+# Features/targets
+X_train = train_df[features]
+X_test  = test_df[features]
+
+yc_train = train_df['is_disrupted'].astype(int)
+yc_test  = test_df['is_disrupted'].astype(int)
+
+yr_train = train_df['landing_deviation']
+yr_test  = test_df['landing_deviation']
 
 # ── Model 1: Disruption classifier ───────────────────────────────────────────
 print('\nTraining disruption classifier...')
