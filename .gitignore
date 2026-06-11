@@ -1,5 +1,6 @@
 .env
 ml/models/*.pkl
+model_metadata.json
 *.parquet
 __pycache__/
 *.pyc
