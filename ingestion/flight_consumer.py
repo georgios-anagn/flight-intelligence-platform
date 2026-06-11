@@ -1,6 +1,7 @@
 import json, os
 from kafka import KafkaConsumer
 import psycopg2
+from psycopg2.errors import UniqueViolation
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
