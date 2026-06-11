@@ -86,6 +86,7 @@ services:
       - ./dbt:/opt/airflow/dbt
       - ./spark:/opt/airflow/spark
       - ./data:/opt/airflow/data
+      - ./ml:/opt/airflow/ml
     command: webserver
 
   airflow-scheduler:
@@ -111,6 +112,7 @@ services:
       - ./dbt:/opt/airflow/dbt
       - ./spark:/opt/airflow/spark
       - ./data:/opt/airflow/data
+      - ./ml:/opt/airflow/ml
     command: scheduler
 
 

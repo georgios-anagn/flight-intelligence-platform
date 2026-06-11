@@ -105,11 +105,21 @@ print(f'MAE:  {mean_absolute_error(yr_test, preds):.2f} landings deviation')
 print(f'R2:   {r2_score(yr_test, preds):.3f}')
 
 # ── Save both models ─────────────────────────────────────────────────────────
-with open('ml/models/disruption_classifier.pkl', 'wb') as f:
+# with open('ml/models/disruption_classifier.pkl', 'wb') as f:
+#    pickle.dump(clf, f)
+#with open('ml/models/deviation_regressor.pkl', 'wb') as f:
+#    pickle.dump(reg, f)
+#with open('ml/models/airport_encoder.pkl', 'wb') as f:
+ #   pickle.dump(le, f)
+
+MODEL_DIR = "/opt/airflow/ml/models"  # running inside Airflow environment
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+with open(f"{MODEL_DIR}/disruption_classifier.pkl", "wb") as f:
     pickle.dump(clf, f)
-with open('ml/models/deviation_regressor.pkl', 'wb') as f:
+with open(f"{MODEL_DIR}/deviation_regressor.pkl", 'wb') as f:
     pickle.dump(reg, f)
-with open('ml/models/airport_encoder.pkl', 'wb') as f:
+with open(f"{MODEL_DIR}/airport_encoder.pkl", 'wb') as f:
     pickle.dump(le, f)
 
 print('\nAll models saved.')
