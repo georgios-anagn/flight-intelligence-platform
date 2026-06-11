@@ -58,21 +58,38 @@ print("Engineering flight features...")
 # Cast polled_at to timestamp if it is not already
 flights = flights.withColumn(
     'polled_at', F.col('polled_at').cast('timestamp')
+).withColumn(
+    "hour_bucket", F.date_trunc("hour", "polled_at")
+)
+
+flights_hourly = flights.groupBy(
+    "dest_airport",
+    "hour_bucket"
+).agg(
+    F.count("id").alias("landings_this_hour"),
+    F.avg("velocity_kmh").alias("avg_velocity"),
+    F.avg("altitude").alias("avg_altitude")
+)
+
+flights_with_hourly = flights.join(
+    flights_hourly,
+    on=["dest_airport", "hour_bucket"],
+    how="left"
 )
 
 # Rolling 7-day average landings per airport
 # rowsBetween(-7*24, 0) means 168 rows back — approximates 7 days at hourly data
-window_7d = Window.partitionBy('dest_airport') \
-                  .orderBy(F.col('polled_at').cast('long')) \
-                  .rowsBetween(-168, -1)
+window_7d = Window.partitionBy("dest_airport") \
+    .orderBy(F.col("polled_at").cast("timestamp").cast("long")) \
+    .rangeBetween(-7 * 24 * 3600, -1)
 
-flights_enriched = flights \
+# average hourly landings in past 7 days
+flights_enriched = flights_with_hourly \
     .withColumn('rolling_avg_landings', F.avg('landings_this_hour').over(window_7d)) \
-    .withColumn('hour_of_day',  F.hour('polled_at')) \
-    .withColumn('day_of_week',  F.dayofweek('polled_at')) \
-    .withColumn('is_weekend',
-        F.when(F.dayofweek('polled_at').isin([1, 7]), 1).otherwise(0)) \
-    .withColumn('month',        F.month('polled_at'))
+    .withColumn('hour_of_day',  F.hour("hour_bucket")) \
+    .withColumn('day_of_week',  F.dayofweek('hour_bucket')) \
+    .withColumn('is_weekend',   F.when(F.dayofweek('hour_bucket').isin([1, 7]), 1).otherwise(0)) \
+    .withColumn('month',        F.month('hour_bucket'))
 
 # ── Step 5: Feature engineering on weather ───────────────────────────────────
 print("Engineering weather features...")
@@ -93,55 +110,66 @@ weather_enriched = weather \
     .withColumn('is_freezing',
         F.when(F.col('temperature_c') < 0, 1).otherwise(0))
 
+weather_hourly = weather_enriched.groupBy(
+    "airport_code",
+    F.date_trunc("hour", "recorded_at").alias("hour_bucket")
+).agg(
+    F.avg("temperature_c").alias("temperature_c"),
+    F.avg("wind_speed_kmh").alias("wind_speed_kmh"),
+    F.avg("wind_gust_kmh").alias("wind_gust_kmh"),
+    F.avg("precipitation_mm").alias("precipitation_mm"),
+    F.avg("visibility_km").alias("visibility_km"),
+    F.avg("cloud_cover_pct").alias("cloud_cover_pct"),
+    F.avg("pressure_hpa").alias("pressure_hpa"),
+    F.first("weather_code").alias("weather_code"),
+    F.max("is_high_wind").alias("is_high_wind"),
+    F.max("is_low_visibility").alias("is_low_visibility"),
+    F.max("is_heavy_rain").alias("is_heavy_rain"),
+    F.max("is_extreme_heat").alias("is_extreme_heat"),
+    F.max("is_freezing").alias("is_freezing")
+)
+
 # ── Step 6: Join flights and weather ─────────────────────────────────────────
 print("Joining flights with weather...")
 
-# Round both timestamps to the nearest 15 minutes to align them
-# (weather updates every 15 min, flights are event-based)
-flights_rounded = flights_enriched.withColumn(
-    'time_bucket',
-    F.date_trunc('hour', F.col('polled_at'))
-)
+print("FLIGHTS COLUMNS:", flights_enriched.columns)
+flights_enriched.printSchema()
 
-weather_rounded = weather_enriched.withColumn(
-    'time_bucket',
-    F.date_trunc('hour', F.col('recorded_at'))
-)
-
-joined = flights_rounded.join(
-    weather_rounded,
+joined = flights_enriched.join(
+    weather_hourly,
     on=[
-        flights_rounded.dest_airport == weather_rounded.airport_code,
-        flights_rounded.time_bucket  == weather_rounded.time_bucket
+        flights_enriched.dest_airport == weather_hourly.airport_code,
+        flights_enriched.hour_bucket  == weather_hourly.hour_bucket
     ],
     how='left'
 ).select(
-    flights_rounded.id,
-    flights_rounded.icao24,
-    flights_rounded.callsign,
-    flights_rounded.dest_airport,
-    flights_rounded.polled_at,
-    flights_rounded.velocity_kmh,
-    flights_rounded.altitude,
-    flights_rounded.event_type,
-    flights_rounded.rolling_avg_landings,
-    flights_rounded.hour_of_day,
-    flights_rounded.day_of_week,
-    flights_rounded.is_weekend,
-    flights_rounded.month,
-    weather_rounded.temperature_c,
-    weather_rounded.wind_speed_kmh,
-    weather_rounded.wind_gust_kmh,
-    weather_rounded.precipitation_mm,
-    weather_rounded.visibility_km,
-    weather_rounded.cloud_cover_pct,
-    weather_rounded.pressure_hpa,
-    weather_rounded.weather_code,
-    weather_rounded.is_high_wind,
-    weather_rounded.is_low_visibility,
-    weather_rounded.is_heavy_rain,
-    weather_rounded.is_extreme_heat,
-    weather_rounded.is_freezing
+    flights_enriched.id,
+    flights_enriched.icao24,
+    flights_enriched.callsign,
+    flights_enriched.dest_airport,
+    flights_enriched.hour_bucket,
+    flights_enriched.polled_at,
+    flights_enriched.velocity_kmh,
+    flights_enriched.altitude,
+    flights_enriched.event_type,
+    flights_enriched.rolling_avg_landings,
+    flights_enriched.hour_of_day,
+    flights_enriched.day_of_week,
+    flights_enriched.is_weekend,
+    flights_enriched.month,
+    weather_hourly.temperature_c,
+    weather_hourly.wind_speed_kmh,
+    weather_hourly.wind_gust_kmh,
+    weather_hourly.precipitation_mm,
+    weather_hourly.visibility_km,
+    weather_hourly.cloud_cover_pct,
+    weather_hourly.pressure_hpa,
+    weather_hourly.weather_code,
+    weather_hourly.is_high_wind,
+    weather_hourly.is_low_visibility,
+    weather_hourly.is_heavy_rain,
+    weather_hourly.is_extreme_heat,
+    weather_hourly.is_freezing
 )
 
 print(f"Joined dataset: {joined.count()} rows")
