@@ -64,10 +64,10 @@ flights = flights.withColumn(
 # rowsBetween(-7*24, 0) means 168 rows back — approximates 7 days at hourly data
 window_7d = Window.partitionBy('dest_airport') \
                   .orderBy(F.col('polled_at').cast('long')) \
-                  .rowsBetween(-168, 0)
+                  .rowsBetween(-168, -1)
 
 flights_enriched = flights \
-    .withColumn('rolling_avg_landings', F.count('id').over(window_7d)) \
+    .withColumn('rolling_avg_landings', F.avg('landings_this_hour').over(window_7d)) \
     .withColumn('hour_of_day',  F.hour('polled_at')) \
     .withColumn('day_of_week',  F.dayofweek('polled_at')) \
     .withColumn('is_weekend',
