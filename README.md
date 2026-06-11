@@ -1,15 +1,15 @@
 
 # Flight Intelligence Platform
 
-A real-time, end-to-end data engineering system that monitors global air traffic at 10 major airports and correlates live landing events with simultaneous weather conditions. Built as a portfolio project demonstrating the full modern data stack — from raw API ingestion through streaming, storage, transformation, machine learning, and live visualisation — running entirely on a local PC at zero cost.
+A real-time, end-to-end data engineering system that monitors global air traffic at 10 major airports and correlates live landing events with simultaneous weather conditions. Built as a portfolio project demonstrating the full modern data stack - from raw API ingestion through streaming, storage, transformation, machine learning, and live visualisation - running entirely on a local PC at zero cost.
 
 ## What This Platform Does
 
-The system polls the OpenSky Network states/all API every 60 seconds, processing the live positions of every aircraft currently in the air worldwide. Using a state-machine approach, it identifies the moment a commercial flight transitions from airborne approach to touchdown at one of 10 monitored airports — from Zurich and London to Los Angeles and Toronto. Simultaneously, the Open-Meteo API records current weather at each airport at the same timestamp.
+The system polls the OpenSky Network states/all API every 60 seconds, processing the live positions of every aircraft currently in the air worldwide. Using a state-machine approach, it identifies the moment a commercial flight transitions from airborne approach to touchdown at one of 10 monitored airports - from Zurich and London to Los Angeles and Toronto. Simultaneously, the Open-Meteo API records current weather at each airport at the same timestamp.
 
-These two streams — landing events and weather readings — are published to Apache Kafka topics, consumed into a PostgreSQL database, transformed and joined by dbt into an analytical model, and processed by Apache Spark for feature engineering. Machine learning models then predict airport disruption — whether an airport will see significantly fewer landings than its historical baseline — based on weather conditions, time of day, and day of week. A Streamlit dashboard serves live results including a world map, per-airport statistics, and real-time predictions.
+These two streams - landing events and weather readings - are published to Apache Kafka topics, consumed into a PostgreSQL database, transformed and joined by dbt into an analytical model, and processed by Apache Spark for feature engineering. Machine learning models then predict airport disruption - whether an airport will see significantly fewer landings than its historical baseline - based on weather conditions, time of day, and day of week. A Streamlit dashboard serves live results including a world map, per-airport statistics, and real-time predictions.
 
-**Core analytical question:** Does weather at an airport cause measurable disruption to landing rates — and which airports are most vulnerable?
+**Core analytical question:** Does weather at an airport cause measurable disruption to landing rates - and which airports are most vulnerable?
 
 ## Architecture
 
@@ -45,11 +45,11 @@ Batch orchestration of dbt runs, Spark jobs and ML models is handled by **Apache
 | Code | Airport | City | Why Selected |
 |------|---------|------|--------------|
 | LSZH | Zurich Airport | Zurich, CH | Local Swiss relevance for DACH employers |
-| EGLL | London Heathrow | London, UK | London fog — historically high weather sensitivity |
+| EGLL | London Heathrow | London, UK | London fog - historically high weather sensitivity |
 | LFPG | Paris CDG | Paris, FR | Europe's second busiest hub |
 | EHAM | Amsterdam Schiphol | Amsterdam, NL | Major European hub, Polderbaan runway |
 | EDDF | Frankfurt Airport | Frankfurt, DE | Largest German hub |
-| LEMD | Madrid Barajas | Madrid, ES | High elevation (610m) — interesting weather dynamics |
+| LEMD | Madrid Barajas | Madrid, ES | High elevation (610m) - interesting weather dynamics |
 | KJFK | New York JFK | New York, US | North Atlantic gateway, frequent storms |
 | KORD | Chicago O'Hare | Chicago, US | Notorious for winter weather delays |
 | KLAX | Los Angeles LAX | Los Angeles, US | West coast hub |
@@ -65,7 +65,6 @@ Batch orchestration of dbt runs, Spark jobs and ML models is handled by **Apache
 | dbt Core | SQL transformations and joined analytical models | Open source |
 | Apache Airflow | Batch orchestration and scheduling | Docker |
 | Apache Spark (PySpark) | Batch feature engineering on Parquet lake | Local mode via pip |
-| Databricks | Exploratory analysis and ML prototyping | Community Edition (free) |
 | scikit-learn | ML model training | Free |
 | Streamlit | Live dashboard | Free / open source |
 | Docker Compose | Local infrastructure orchestration | Free |
@@ -106,16 +105,16 @@ cd dbt && dbt run --profiles-dir .
 Open four separate terminals, all with `conda activate flight-pipeline`:
 
 ```bash
-# Terminal 1 — Flight landing detection
+# Terminal 1 - Flight landing detection
 python ingestion/flight_producer.py
 
-# Terminal 2 — Weather data collection
+# Terminal 2 - Weather data collection
 python ingestion/weather_producer.py
 
-# Terminal 3 — Write flights to PostgreSQL
+# Terminal 3 - Write flights to PostgreSQL
 python ingestion/flight_consumer.py
 
-# Terminal 4 — Write weather to PostgreSQL
+# Terminal 4 - Write weather to PostgreSQL
 python ingestion/weather_consumer.py
 ```
 
@@ -132,9 +131,9 @@ python ml/train.py
 streamlit run dashboard/streamlit_app.py
 ```
 
-Airflow runs automatically at http://localhost:8080 — dbt refreshes daily at 06:00 UTC, Spark feature engineering at 06:30 UTC, and ML retraining weekly on Mondays at 07:00 UTC.
+Airflow runs automatically at http://localhost:8080 - dbt refreshes daily at 06:00 UTC, Spark feature engineering at 06:30 UTC, and ML retraining weekly on Mondays at 07:00 UTC.
 
-## Data Collection — Methodology and Limitations
+## Data Collection - Methodology and Limitations
 
 ### How landing detection works
 
@@ -144,7 +143,7 @@ Since the arrival endpoint is restricted for free accounts, landings are inferre
 
 1. An aircraft within a 50km radius and below 8,000m AGL is classified as `APPROACHING`
 2. A landing event fires when the same aircraft transitions to `on_ground = True` in the next poll
-3. A geometric fallback fires if the aircraft is within 4km, below 150m AGL, and still descending — catching cases where the transponder's `on_ground` flag is slow to update
+3. A geometric fallback fires if the aircraft is within 4km, below 150m AGL, and still descending - catching cases where the transponder's `on_ground` flag is slow to update
 
 Each airport has a defined bounding box to prevent misattribution between nearby airports, and a 10-minute cooldown per aircraft prevents duplicate events.
 
@@ -154,7 +153,7 @@ Each airport has a defined bounding box to prevent misattribution between nearby
 
 - **Duplicate detections:** The same physical landing can occasionally produce 2-3 events if the aircraft's transponder reports inconsistently between polls or if the callsign changes slightly. A database-level deduplication constraint (one event per callsign per airport per 30 minutes) mitigates this but does not eliminate it entirely.
 
-- **Missed landings:** Aircraft that descend through the bounding box between polls — landing and taxiing away within a single 60-second window — may not be detected. This is more common at airports with thinner ADS-B receiver coverage, particularly outside Europe and North America.
+- **Missed landings:** Aircraft that descend through the bounding box between polls - landing and taxiing away within a single 60-second window - may not be detected. This is more common at airports with thinner ADS-B receiver coverage, particularly outside Europe and North America.
 
 - **No schedule data:** The pipeline captures actual landing times but has no access to scheduled arrival times. True delay calculation (actual minus scheduled) is therefore not possible with the current data sources. The ML models instead predict *disruption to baseline landing rates* rather than individual flight delays.
 
@@ -172,17 +171,17 @@ Two models are trained on the `flight_weather_impact` table, which measures how 
 
 ### Model 1: Disruption Classifier
 - **Type:** Gradient Boosting Classifier
-- **Target:** `is_disrupted` — did this airport-hour see 30% fewer landings than its historical average for that time slot?
+- **Target:** `is_disrupted` - did this airport-hour see 30% fewer landings than its historical average for that time slot?
 - **Features:** Weather conditions (temperature, wind speed, precipitation, visibility, cloud cover, pressure), time features (hour of day, day of week, weekend flag), Spark-engineered binary flags (is_high_wind, is_low_visibility, is_heavy_rain), rolling 7-day landing average
-- **Use case:** Real-time alert — is this airport currently being disrupted by weather?
+- **Use case:** Real-time alert - is this airport currently being disrupted by weather?
 
 ### Model 2: Deviation Regressor
 - **Type:** Random Forest Regressor
-- **Target:** `landing_deviation` — how many landings above or below baseline is this airport-hour?
+- **Target:** `landing_deviation` - how many landings above or below baseline is this airport-hour?
 - **Features:** Same as classifier
 - **Use case:** Quantify the magnitude of disruption, not just its presence
 
-Feature importance analysis from both models reveals which weather factors most strongly predict disruption at each airport — a key analytical output of the platform.
+Feature importance analysis from both models reveals which weather factors most strongly predict disruption at each airport - a key analytical output of the platform.
 
 ## Repository Structure
 
@@ -240,6 +239,6 @@ flight-intelligence-platform/
 
 ## Acknowledgements
 
-- [OpenSky Network](https://opensky-network.org/) — free real-time ADS-B flight data
-- [Open-Meteo](https://open-meteo.com/) — free historical and real-time weather API
-MDEOF
+- [OpenSky Network](https://opensky-network.org/) -- free real-time ADS-B flight data
+- [Open-Meteo](https://open-meteo.com/) -- free historical and real-time weather API
+
