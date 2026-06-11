@@ -2,10 +2,13 @@ import pandas as pd
 import psycopg2
 import os
 import pickle
+import datetime
+import json
 from dotenv import load_dotenv
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import TimeSeriesSplit, cross_val_score
 from sklearn.metrics import classification_report, mean_absolute_error, r2_score
+from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.preprocessing import LabelEncoder
 
 load_dotenv()
@@ -83,8 +86,8 @@ df['rolling_avg_landings'] = df['rolling_avg_landings'].fillna(0)
 # Ensure time order
 df = df.sort_values('polled_at')
 
-# Define time-based cutoff (last 1 day = test set)
-cutoff = df['polled_at'].max() - pd.Timedelta(days=1)
+# Define time-based cutoff (last 20% of days = test set)
+cutoff = df['polled_at'].quantile(0.8)
 
 train_df = df[df['polled_at'] <= cutoff]
 test_df  = df[df['polled_at'] > cutoff]
@@ -102,7 +105,21 @@ yr_test  = test_df['landing_deviation']
 # ── Model 1: Disruption classifier ───────────────────────────────────────────
 print('\nTraining disruption classifier...')
 clf = GradientBoostingClassifier(n_estimators=200, max_depth=4, random_state=42)
-clf.fit(X_train, yc_train)
+
+# Cross-Validation
+tscv = TimeSeriesSplit(n_splits=5)
+sample_weights = compute_sample_weight("balanced", yc_train)
+scores = cross_val_score(
+    clf,
+    X_train,
+    yc_train,
+    cv=tscv,
+    scoring='f1'
+)
+print("CV F1 scores:", scores)
+print("Mean CV F1:", scores.mean())
+
+clf.fit(X_train, yc_train, sample_weight=compute_sample_weight("balanced", yc_train))  # "balanced" in order to take into account all classes - in the case where disruptions where a few the model would recognize to always predict no-disruption
 print(classification_report(yc_test, clf.predict(X_test)))
 
 # Feature importance
@@ -119,13 +136,6 @@ print(f'MAE:  {mean_absolute_error(yr_test, preds):.2f} landings deviation')
 print(f'R2:   {r2_score(yr_test, preds):.3f}')
 
 # ── Save both models ─────────────────────────────────────────────────────────
-# with open('ml/models/disruption_classifier.pkl', 'wb') as f:
-#    pickle.dump(clf, f)
-#with open('ml/models/deviation_regressor.pkl', 'wb') as f:
-#    pickle.dump(reg, f)
-#with open('ml/models/airport_encoder.pkl', 'wb') as f:
- #   pickle.dump(le, f)
-
 MODEL_DIR = "/opt/airflow/ml/models"  # running inside Airflow environment
 os.makedirs(MODEL_DIR, exist_ok=True)
 
@@ -138,3 +148,16 @@ with open(f"{MODEL_DIR}/airport_encoder.pkl", 'wb') as f:
 
 print('\nAll models saved.')
 conn.close()
+
+# Create metadata json
+metadata = {
+    "training_time": str(datetime.datetime.utcnow()),
+    "rows": len(df),
+    "features": features,
+    "disruption_rate": float(yc_train.mean()),
+    "classifier_type": "GradientBoostingClassifier",
+    "regressor_type": "RandomForestRegressor"
+}
+
+with open(f"{MODEL_DIR}/model_metadata.json", "w") as f:
+    json.dump(metadata, f, indent=2)
