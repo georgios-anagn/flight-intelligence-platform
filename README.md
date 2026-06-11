@@ -5,7 +5,7 @@ A real-time, end-to-end data engineering system that monitors global air traffic
 
 ## What This Platform Does
 
-The system polls the OpenSky Network states/all API every 60 seconds, processing the live positions of every aircraft currently in the air worldwide. Using a state-machine approach, it identifies the moment a commercial flight transitions from airborne approach to touchdown at one of 10 monitored airports - from Zurich and London to Los Angeles and Toronto. Simultaneously, the Open-Meteo API records current weather at each airport at the same timestamp.
+The system polls the OpenSky Network states/all API every 60 seconds, processing the live positions of every aircraft currently in the air worldwide. Using a state-machine approach, it identifies the moment a commercial flight transitions from airborne approach to touchdown at one of 10 monitored airports - from Zurich and London to Los Angeles and Toronto. Simultaneously, the Open-Meteo API records current weather at each airport every 5 minutes. Same timestamp is not possible due to API limitations - this does not affect the combined data.
 
 These two streams - landing events and weather readings - are published to Apache Kafka topics, consumed into a PostgreSQL database, transformed and joined by dbt into an analytical model, and processed by Apache Spark for feature engineering. Machine learning models then predict airport disruption - whether an airport will see significantly fewer landings than its historical baseline - based on weather conditions, time of day, and day of week. A Streamlit dashboard serves live results including a world map, per-airport statistics, and real-time predictions.
 
