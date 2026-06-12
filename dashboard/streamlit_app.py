@@ -1,5 +1,3 @@
-# streamlit_app.py
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -273,8 +271,8 @@ if page == "📊 Overview":
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("✈️ Total Hour-Slots",    f"{len(df):,}")
-    k2.metric("🚨 Disrupted Hours",     f"{int(df['is_disrupted'].sum()):,}")
+    k1.metric("✈️ Total Landings",    f"{len(df):,}")
+    k2.metric("🚨 Disrupted Hours\n(<70% avg landings)",     f"{int(df['is_disrupted'].sum()):,}")
     k3.metric("⚠️ Disruption Rate",     f"{df['is_disrupted'].mean()*100:.1f}%")
     k4.metric("📉 Avg Landing Dev.",    f"{df['landing_deviation'].mean():+.2f}")
     k5.metric("🛬 Avg Landings/Hour",   f"{df['landings_this_hour'].mean():.1f}")
@@ -355,7 +353,7 @@ if page == "📊 Overview":
     col_h1, col_h2 = st.columns(2)
 
     with col_h1:
-        st.subheader("Disruption Rate – Hour × Day of Week")
+        st.subheader("Disruption Rate - Hour × Day of Week")
         pivot = (
             df.groupby(["hour_of_day", "day_of_week"])["is_disrupted"]
             .mean()
@@ -561,7 +559,7 @@ elif page == "✈️ Airport Analysis":
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     a1, a2, a3, a4, a5 = st.columns(5)
-    a1.metric("Total Hour-Slots",     f"{len(adf):,}")
+    a1.metric("Total Landings",     f"{len(adf):,}")
     a2.metric("Disrupted Hours",      f"{int(adf['is_disrupted'].sum()):,}")
     a3.metric("Disruption Rate",      f"{adf['is_disrupted'].mean()*100:.1f}%")
     a4.metric("Avg Landings/hr",      f"{adf['landings_this_hour'].mean():.1f}")
@@ -969,7 +967,7 @@ elif page == "🔮 Live Prediction":
             airport_encoded = int(le.transform([airport_input])[0])
         else:
             airport_encoded = 0
-            st.warning("Airport not seen during training — using fallback encoding (0).")
+            st.warning("Airport not seen during training - using fallback encoding (0).")
 
         input_data = pd.DataFrame([{
             "airport_encoded":    airport_encoded,
