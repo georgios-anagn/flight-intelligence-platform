@@ -66,10 +66,9 @@ features = [
     'airport_encoded',
     'temperature_c', 'wind_speed_kmh', 'wind_gust_kmh',
     'precipitation_mm', 'visibility_km', 'cloud_cover_pct',
-    'pressure_hpa', 'hour_of_day', 'day_of_week', 'is_weekend',
+    'pressure_hpa', 'hour_of_day', 'day_of_week',
     'is_high_wind', 'is_low_visibility', 'is_heavy_rain',
-    'is_extreme_heat', 'is_freezing', 'rolling_avg_landings',
-    'baseline_landings'
+    'is_extreme_heat', 'is_freezing', 'rolling_avg_landings'
 ]
 
 df = df.dropna(subset=features + ['is_disrupted', 'landing_deviation'])
