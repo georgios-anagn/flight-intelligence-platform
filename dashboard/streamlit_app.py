@@ -272,11 +272,15 @@ if page == "📊 Overview":
     # ── KPIs ──────────────────────────────────────────────────────────────────
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     k1.metric("✈️ Total Landings",    f"{len(df):,}")
-    k2.metric("🚨 Disrupted Hours\n(<70% avg landings)",     f"{int(df['is_disrupted'].sum()):,}")
+    k2.metric("🚨 Disrupted Hours",     f"{int(df['is_disrupted'].sum()):,}")
     k3.metric("⚠️ Disruption Rate",     f"{df['is_disrupted'].mean()*100:.1f}%")
     k4.metric("📉 Avg Landing Dev.",    f"{df['landing_deviation'].mean():+.2f}")
     k5.metric("🛬 Avg Landings/Hour",   f"{df['landings_this_hour'].mean():.1f}")
     k6.metric("🏙️ Airports in View",    f"{df['airport_code'].nunique()}")
+    st.caption(
+        "A **disrupted hour** is any hour where actual landings fell below 70% of the historical baseline. "
+        "**Landing deviation** = actual landings − baseline landings (negative = fewer than expected)."
+    )
 
     st.markdown("---")
 
@@ -323,6 +327,10 @@ if page == "📊 Overview":
             hovermode="x unified",
         )
         show(fig_ts)
+        st.caption(
+            "The dashed orange vertical line marks the train/test split (80th percentile by time). "
+            "Data to the right of the line was held out and never seen by the model during training."
+        )
 
     with col_r:
         st.subheader("Disruption Rate by Airport")
@@ -346,6 +354,10 @@ if page == "📊 Overview":
         )
         fig_apt.update_traces(textposition="outside")
         show(fig_apt)
+        st.caption(
+            "Airports are sorted from lowest to highest disruption rate. "
+            "Colour transitions from green (low) through orange to red (high risk)."
+        )
 
     st.markdown("---")
 
@@ -368,6 +380,10 @@ if page == "📊 Overview":
         )
         fig_hm.update_layout(height=380, margin=dict(l=0, r=0, t=20, b=0))
         show(fig_hm)
+        st.caption(
+            "Each cell shows the average disruption rate (%) for that hour-of-day and day-of-week combination. "
+            "Darker red = higher disruption frequency."
+        )
 
     with col_h2:
         st.subheader("Landing Deviation Distribution")
@@ -385,6 +401,11 @@ if page == "📊 Overview":
         )
         fig_dev.update_layout(height=380, margin=dict(l=0, r=0, t=20, b=0))
         show(fig_dev)
+        st.caption(
+            "Landing deviation = actual landings this hour − baseline. "
+            "The white dashed line marks zero (on-baseline). The orange dotted line marks the overall mean. "
+            "A left-skewed distribution indicates more hours with fewer landings than expected."
+        )
 
     # ── Z-score distribution ──────────────────────────────────────────────────
     st.subheader("Deviation Z-Score (Disruption Signal)")
@@ -400,6 +421,11 @@ if page == "📊 Overview":
     fig_z.add_vline(x= 2, line_dash="dash", line_color="white", annotation_text="+2σ")
     fig_z.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
     show(fig_z)
+    st.caption(
+        "The z-score expresses each hour's landing deviation in units of standard deviations from the mean. "
+        "The dashed ±2σ lines are conventional statistical anomaly thresholds. "
+        "Disrupted hours (red) should cluster in the negative tail, confirming the signal separates the two classes."
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -417,6 +443,10 @@ elif page == "🌤️ Weather Impact":
     w_cols = st.columns(5)
     for col, flag, label in zip(w_cols, FLAG_COLS, FLAG_LABELS):
         col.metric(label, f"{df[flag].fillna(0).mean()*100:.1f}%")
+    st.caption(
+        "Percentage of all observed hours in the selected date window where each adverse weather condition was active. "
+        "Thresholds: High Wind >50 km/h · Low Visibility <3 km · Heavy Rain >5 mm · Extreme Heat >38 °C · Freezing <0 °C."
+    )
 
     st.markdown("---")
 
@@ -446,6 +476,11 @@ elif page == "🌤️ Weather Impact":
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
         show(fig_fd)
+        st.caption(
+            "For each weather condition, the red bar shows the disruption rate during hours when that condition "
+            "was active, and the green bar shows the rate when it was not. "
+            "A large gap between the two bars indicates that condition is a strong driver of disruption."
+        )
 
     with col_b:
         st.subheader("Mean Landing Deviation by Weather Condition")
@@ -470,6 +505,10 @@ elif page == "🌤️ Weather Impact":
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
         show(fig_fdev)
+        st.caption(
+            "Mean landing deviation (actual − baseline) split by whether each weather condition was active or not. "
+            "More negative values when a condition is active confirm that the condition suppresses landing volumes."
+        )
 
     st.markdown("---")
 
@@ -505,6 +544,12 @@ elif page == "🌤️ Weather Impact":
     ))
     fig_sc.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0))
     show(fig_sc)
+    st.caption(
+        f"Up to 3,000 randomly sampled data points are shown for readability. "
+        f"The dashed white line is an OLS linear fit (slope = {m:.3f}): a negative slope means higher "
+        f"{FEATURE_LABELS.get(sel_weather, sel_weather)} is associated with fewer landings than baseline. "
+        "Hover over any point to see the airport it belongs to."
+    )
 
     st.markdown("---")
 
@@ -522,6 +567,11 @@ elif page == "🌤️ Weather Impact":
     )
     fig_corr.update_layout(height=480, margin=dict(l=0, r=0, t=20, b=0))
     show(fig_corr)
+    st.caption(
+        "Pearson correlation coefficients between all numeric weather and operational features. "
+        "Blue = negative correlation · Red = positive correlation · Values near 0 indicate little linear relationship. "
+        "Pay attention to the `is_disrupted` and `landing_deviation` rows/columns to identify the strongest weather predictors."
+    )
 
     st.markdown("---")
 
@@ -541,6 +591,12 @@ elif page == "🌤️ Weather Impact":
     )
     fig_box.update_layout(height=380, margin=dict(l=0, r=0, t=20, b=0), showlegend=False)
     show(fig_box)
+    st.caption(
+        "Box plots show the median (centre line), interquartile range (IQR, box), and whiskers extending to 1.5× IQR. "
+        "Dots beyond the whiskers are statistical outliers. "
+        "A clear vertical separation between the Normal and Disrupted boxes suggests this variable meaningfully "
+        "differentiates disrupted from non-disrupted hours."
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -549,6 +605,7 @@ elif page == "🌤️ Weather Impact":
 
 elif page == "✈️ Airport Analysis":
     st.title("✈️ Airport-Level Analysis")
+    st.caption("Drill into a single airport's operational and weather profile across the full historical dataset.")
 
     airport_sel = st.selectbox("Select Airport", all_airports)
     adf = df_raw[df_raw["airport_code"] == airport_sel].copy()
@@ -559,11 +616,15 @@ elif page == "✈️ Airport Analysis":
 
     # ── KPIs ──────────────────────────────────────────────────────────────────
     a1, a2, a3, a4, a5 = st.columns(5)
-    a1.metric("Total Landings",     f"{len(adf):,}")
-    a2.metric("Disrupted Hours",      f"{int(adf['is_disrupted'].sum()):,}")
-    a3.metric("Disruption Rate",      f"{adf['is_disrupted'].mean()*100:.1f}%")
-    a4.metric("Avg Landings/hr",      f"{adf['landings_this_hour'].mean():.1f}")
-    a5.metric("Avg Landing Deviation",f"{adf['landing_deviation'].mean():+.2f}")
+    a1.metric("Total Landings",      f"{len(adf):,}")
+    a2.metric("Disrupted Hours",     f"{int(adf['is_disrupted'].sum()):,}")
+    a3.metric("Disruption Rate",     f"{adf['is_disrupted'].mean()*100:.1f}%")
+    a4.metric("Avg Landings/hr",     f"{adf['landings_this_hour'].mean():.1f}")
+    a5.metric("Avg Landing Deviation", f"{adf['landing_deviation'].mean():+.2f}")
+    st.caption(
+        "Metrics cover the full unfiltered history for this airport (date-range sidebar filter does not apply here). "
+        "Disrupted hours are those where landings fell below 70% of the hourly baseline."
+    )
 
     st.markdown("---")
 
@@ -595,6 +656,11 @@ elif page == "✈️ Airport Analysis":
     fig_at.update_layout(height=480, margin=dict(l=0, r=0, t=40, b=0),
                          showlegend=False, hovermode="x unified")
     show(fig_at)
+    st.caption(
+        "Top panel: total landings summed across all hours in each calendar day. "
+        "Bottom panel: fraction of hours within that day classified as disrupted, expressed as a percentage. "
+        "Days where the red area spikes alongside a dip in the blue bars are the most operationally impactful."
+    )
 
     st.markdown("---")
 
@@ -612,6 +678,10 @@ elif page == "✈️ Airport Analysis":
         fig_hr.update_layout(height=320, margin=dict(l=0, r=0, t=20, b=0),
                               coloraxis_showscale=False)
         show(fig_hr)
+        st.caption(
+            "Average number of landings per hour of the day, aggregated over all dates in the dataset. "
+            "Darker bars indicate higher traffic periods - typically morning and early-evening peaks."
+        )
 
     with col_p2:
         st.subheader("Disruption Rate by Hour of Day")
@@ -626,6 +696,11 @@ elif page == "✈️ Airport Analysis":
         fig_dhr.update_layout(height=320, margin=dict(l=0, r=0, t=20, b=0),
                                coloraxis_showscale=False)
         show(fig_dhr)
+        st.caption(
+            "Disruption rate for each hour of the day across all dates. "
+            "Compare with the landings chart on the left - high-traffic hours with elevated disruption rates "
+            "represent the greatest operational risk windows for this airport."
+        )
 
     st.markdown("---")
 
@@ -639,6 +714,10 @@ elif page == "✈️ Airport Analysis":
     w5.metric("👁️ Avg Visibility (km)", f"{adf['visibility_km'].mean():.1f}")
     w6.metric("☁️ Avg Cloud Cover (%)", f"{adf['cloud_cover_pct'].mean():.1f}")
     w7.metric("🔵 Avg Pressure (hPa)",  f"{adf['pressure_hpa'].mean():.1f}")
+    st.caption(
+        "Long-run averages of raw weather measurements recorded at this airport. "
+        "These provide context for interpreting the adverse-condition rates shown below."
+    )
 
     st.markdown("---")
 
@@ -668,6 +747,10 @@ elif page == "✈️ Airport Analysis":
                                coloraxis_showscale=False)
         fig_occ.update_traces(textposition="outside")
         show(fig_occ)
+        st.caption(
+            "Percentage of all recorded hours at this airport where each adverse weather flag was active. "
+            "A high occurrence rate does not necessarily mean high disruption - cross-reference with the chart on the right."
+        )
 
     with col_f2:
         fig_dis_flag = px.bar(
@@ -681,6 +764,10 @@ elif page == "✈️ Airport Analysis":
                                     coloraxis_showscale=False)
         fig_dis_flag.update_traces(textposition="outside")
         show(fig_dis_flag)
+        st.caption(
+            "Of the hours where each condition was active, what fraction were classified as disrupted? "
+            "High values here point to conditions that, when they occur at this airport, reliably cause disruption."
+        )
 
     st.markdown("---")
 
@@ -708,6 +795,11 @@ elif page == "✈️ Airport Analysis":
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
     show(fig_roll)
+    st.caption(
+        "The solid blue line is the daily mean of actual landings per hour. "
+        "The dotted orange line is the 7-day rolling average used as the baseline in the disruption model. "
+        "Sustained gaps where actuals fall well below the rolling average correspond to periods of operational stress."
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -742,11 +834,17 @@ elif page == "🎯 Model Performance":
     # ── Model KPIs ────────────────────────────────────────────────────────────
     st.subheader("Key Metrics — Test Set")
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("ROC-AUC (Classifier)",       f"{roc_auc:.3f}")
-    m2.metric("MAE (Regressor)",             f"{mae:.2f} landings")
-    m3.metric("R² (Regressor)",              f"{r2:.3f}")
-    m4.metric("Test Set Size",               f"{len(X_test):,} rows")
-    m5.metric("Train/Test Cutoff",           str(cutoff_ts)[:10])
+    m1.metric("ROC-AUC (Classifier)",  f"{roc_auc:.3f}")
+    m2.metric("MAE (Regressor)",       f"{mae:.2f} landings")
+    m3.metric("R² (Regressor)",        f"{r2:.3f}")
+    m4.metric("Test Set Size",         f"{len(X_test):,} rows")
+    m5.metric("Train/Test Cutoff",     str(cutoff_ts)[:10])
+    st.caption(
+        "**ROC-AUC**: classifier ability to separate disrupted from normal hours - 1.0 is perfect, 0.5 is random chance. "
+        "**MAE**: average absolute error of the deviation regressor in landing units. "
+        "**R²**: proportion of deviation variance explained by the regressor - 1.0 is a perfect fit, 0 means the model "
+        "does no better than predicting the mean. All metrics are computed on data the models have never seen."
+    )
 
     st.markdown("---")
 
@@ -757,6 +855,13 @@ elif page == "🎯 Model Performance":
     st.dataframe(
         report_df.style.background_gradient(cmap="RdYlGn", subset=["precision", "recall", "f1-score"]),
         width="stretch",
+    )
+    st.caption(
+        "**Precision**: of all hours predicted as disrupted, how many actually were. "
+        "**Recall**: of all truly disrupted hours, how many the model caught. "
+        "**F1-score**: harmonic mean of precision and recall - useful when class sizes are imbalanced. "
+        "**Support**: number of actual instances of each class in the test set. "
+        "Green = stronger performance, red = weaker."
     )
 
     st.markdown("---")
@@ -777,6 +882,13 @@ elif page == "🎯 Model Performance":
         )
         fig_cm.update_layout(height=380, margin=dict(l=0, r=0, t=20, b=0))
         show(fig_cm)
+        st.caption(
+            "Rows = actual labels · Columns = model predictions. "
+            "Top-left: true negatives (correctly called normal). "
+            "Bottom-right: true positives (correctly called disrupted). "
+            "Top-right: false positives (false alarms). "
+            "Bottom-left: false negatives (missed disruptions) - operationally the costliest error type."
+        )
 
     with col_roc:
         st.subheader(f"ROC Curve (AUC = {roc_auc:.3f})")
@@ -798,6 +910,11 @@ elif page == "🎯 Model Performance":
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
         show(fig_roc)
+        st.caption(
+            "The ROC curve plots the true positive rate against the false positive rate at every possible "
+            "classification threshold. The closer the curve hugs the top-left corner, the better. "
+            "The dashed diagonal represents a model that classifies purely at random (AUC = 0.5)."
+        )
 
     st.markdown("---")
 
@@ -827,6 +944,11 @@ elif page == "🎯 Model Performance":
             )
         )
         show(fig_fi)
+        st.caption(
+            "Mean decrease in impurity (Gini importance) for each feature in the disruption classifier. "
+            "Features at the top of the chart have the greatest influence on whether the model predicts "
+            "a disruption. Importance values sum to 1 across all features."
+        )
 
     with col_fi2:
         st.subheader("Feature Importance — Deviation Regressor")
@@ -851,6 +973,11 @@ elif page == "🎯 Model Performance":
             )
         )
         show(fig_fi2)
+        st.caption(
+            "Same importance metric for the landing deviation regressor. "
+            "Comparing this chart with the classifier chart on the left reveals whether the same features "
+            "drive both the binary disruption decision and the magnitude of the deviation."
+        )
 
     st.markdown("---")
 
@@ -881,6 +1008,12 @@ elif page == "🎯 Model Performance":
     ))
     fig_avp.update_layout(height=440, margin=dict(l=0, r=0, t=20, b=0))
     show(fig_avp)
+    st.caption(
+        "Each point is a test-set observation coloured by airport. "
+        "The green dotted line is the perfect-prediction diagonal (Predicted = Actual). "
+        "The white dashed line is the OLS fit through the predictions - the closer it aligns with the green line, "
+        "the less systematic bias the model has. Points far from both lines are the largest individual errors."
+    )
 
     st.markdown("---")
 
@@ -900,6 +1033,12 @@ elif page == "🎯 Model Performance":
     )
     fig_res.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
     show(fig_res)
+    st.caption(
+        "Residuals = Actual deviation - Predicted deviation. "
+        "An ideal regressor produces residuals centred tightly on zero (white dashed line) with a roughly symmetric, "
+        "bell-shaped distribution. The orange dotted line shows the mean residual - a value close to zero indicates "
+        "the model has little systematic over- or under-prediction bias."
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -920,6 +1059,10 @@ elif page == "🔮 Live Prediction":
     # ── Input form ────────────────────────────────────────────────────────────
     with st.form("prediction_form"):
         st.subheader("✈️ Operational Context")
+        st.caption(
+            "Select the airport and time context for the prediction. "
+            "Baseline and rolling average landings are used by the model to gauge how busy this hour typically is."
+        )
         fc1, fc2, fc3 = st.columns(3)
         with fc1:
             airport_input  = st.selectbox("Airport", all_airports)
@@ -933,6 +1076,11 @@ elif page == "🔮 Live Prediction":
             st.markdown("&nbsp;")   # spacer
 
         st.subheader("🌤️ Weather Conditions")
+        st.caption(
+            "Enter the current observed weather at the airport. "
+            "Binary flags (High Wind, Low Visibility, etc.) are automatically derived from these values "
+            "using the same thresholds applied during model training - you do not need to set them manually."
+        )
         wc1, wc2, wc3, wc4 = st.columns(4)
         with wc1:
             temperature_c   = st.number_input("Temperature (°C)",    -30.0, 55.0,  20.0, 0.5)
@@ -1004,6 +1152,12 @@ elif page == "🔮 Live Prediction":
                   delta=None)
         r3.metric("📉 Predicted Landing Deviation", f"{dev_pred:+.2f}")
         r4.metric("🏙️ Airport", airport_input)
+        st.caption(
+            "**Disruption Probability**: the classifier's confidence that this hour will be disrupted (threshold = 50%). "
+            "**Disruption Predicted**: binary outcome at the 50% threshold. "
+            "**Predicted Landing Deviation**: the regressor's estimate of how many landings above or below baseline "
+            "to expect - negative values mean fewer landings than the historical norm."
+        )
 
         st.markdown("---")
 
@@ -1035,9 +1189,20 @@ elif page == "🔮 Live Prediction":
             ))
             fig_gauge.update_layout(height=360, margin=dict(l=20, r=20, t=40, b=20))
             show(fig_gauge)
+            st.caption(
+                "Green zone (0-33%): low disruption risk. "
+                "Orange zone (33-66%): elevated risk. "
+                "Red zone (66-100%): high disruption risk. "
+                "The white threshold line marks the 50% decision boundary. "
+                "The delta shows how this prediction compares to the overall historical disruption rate from training."
+            )
 
         with col_flags:
             st.subheader("Derived Weather Flags")
+            st.caption(
+                "Flags are automatically computed from the weather values you entered. "
+                "🔴 ACTIVE flags were passed as 1 to the model and may be increasing the predicted disruption risk."
+            )
             flag_results = {
                 "💨 High Wind (>50 km/h)":       is_high_wind,
                 "🌫️ Low Visibility (<3 km)":      is_low_visibility,
@@ -1052,6 +1217,7 @@ elif page == "🔮 Live Prediction":
 
             st.markdown("---")
             st.subheader("Input Summary")
+            st.caption("Full set of values passed to both models for this prediction run.")
             st.json({
                 "airport":          airport_input,
                 "hour_of_day":      hour_of_day,
@@ -1069,6 +1235,10 @@ elif page == "🔮 Live Prediction":
 
         # ── Context: how does this prediction compare to historical data? ─────
         st.subheader("📊 How Does This Compare to Historical Data?")
+        st.caption(
+            "These charts place your prediction in the context of every historical observation recorded for "
+            f"{airport_input}. Use them to judge whether your inputs represent a typical or unusual scenario."
+        )
         hist_airport = df_raw[df_raw["airport_code"] == airport_input]
 
         if not hist_airport.empty:
@@ -1098,6 +1268,11 @@ elif page == "🔮 Live Prediction":
                 )
                 fig_hist_prob.update_layout(height=320, margin=dict(l=0, r=0, t=20, b=0))
                 show(fig_hist_prob)
+                st.caption(
+                    "Distribution of disruption probabilities the model assigns to all historical hours at this airport. "
+                    "The red dashed line marks the probability for your current inputs. "
+                    "If your line sits in the far right tail, your scenario is historically unusual."
+                )
 
             with col_c2:
                 st.markdown(f"**Landing deviation distribution — {airport_input}**")
@@ -1114,5 +1289,10 @@ elif page == "🔮 Live Prediction":
                 )
                 fig_hist_dev.update_layout(height=320, margin=dict(l=0, r=0, t=20, b=0))
                 show(fig_hist_dev)
+                st.caption(
+                    "Distribution of actual landing deviations recorded at this airport across all historical hours. "
+                    "The orange dashed line marks the regressor's predicted deviation for your inputs. "
+                    "A prediction in the left tail indicates the model expects significantly fewer landings than normal."
+                )
         else:
             st.info("No historical data available for the selected airport to compare against.")
